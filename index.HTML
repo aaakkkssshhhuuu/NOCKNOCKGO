@@ -1,0 +1,3700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MISSION JEE // Tactical RGB Command & Time Tracker</title>
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <link
+    rel="icon"
+    type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23050508'/%3E%3Cpath d='M35 6L12 36h17l-3 22 26-30H35l3-22z' fill='%2300f5d4'/%3E%3C/svg%3E"
+  />
+  <style>
+    /* ==========================================================================
+       100% OFFLINE CSS ENGINE (ZERO EXTERNAL FONTS, ZERO CDNS, PURE SYSTEM STACK)
+       ========================================================================== */
+    :root {
+      --bg-obsidian: #050508;
+      --bg-panel: rgba(11, 14, 23, 0.86);
+      --bg-panel-solid: #0b0e17;
+      --bg-elevated: rgba(17, 22, 36, 0.92);
+      --bg-input: rgba(6, 8, 14, 0.88);
+      --border-dim: rgba(148, 163, 184, 0.16);
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --text-muted: #64748b;
+
+      --rgb-primary: #00f5d4;
+      --rgb-secondary: #7b2cbf;
+      --rgb-tertiary: #ff2a85;
+      --glow-scale: 1;
+      --rgb-speed: 7s;
+
+      --wall-dim: 0.78;
+      --wall-blur: 4px;
+
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, Cantarell, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background-color: var(--bg-obsidian);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Fullscreen Custom Wallpaper Layer + Adjustable Dim & Blur Veil */
+    #wallpaperLayer {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      filter: blur(var(--wall-blur));
+      transform: scale(1.04);
+      opacity: 0;
+      transition: opacity 0.35s ease, filter 0.2s ease;
+      pointer-events: none;
+    }
+
+    #wallpaperLayer.has-wallpaper {
+      opacity: 1;
+    }
+
+    #wallpaperVeil {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background:
+        radial-gradient(circle at 18% 12%, color-mix(in srgb, var(--rgb-primary) 10%, transparent), transparent 48%),
+        radial-gradient(circle at 84% 85%, color-mix(in srgb, var(--rgb-secondary) 12%, transparent), transparent 52%),
+        rgba(5, 5, 8, var(--wall-dim));
+      pointer-events: none;
+      transition: background 0.2s ease;
+    }
+
+    .tactical-grid {
+      background-image:
+        linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+
+    /* Main Content Wrapper sits above Wallpaper & Veil */
+    .app-shell {
+      position: relative;
+      z-index: 2;
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 14px 18px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* RGB Animations */
+    @keyframes rgbHueCycle {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(360deg); }
+    }
+
+    @keyframes gradientSlide {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes attackGlowPulse {
+      0%, 100% {
+        box-shadow:
+          0 0 calc(16px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 48%, transparent),
+          0 0 calc(34px * var(--glow-scale)) color-mix(in srgb, var(--rgb-secondary) 24%, transparent),
+          inset 0 0 14px color-mix(in srgb, var(--rgb-primary) 14%, transparent);
+      }
+      50% {
+        box-shadow:
+          0 0 calc(26px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 72%, transparent),
+          0 0 calc(52px * var(--glow-scale)) color-mix(in srgb, var(--rgb-tertiary) 35%, transparent),
+          inset 0 0 22px color-mix(in srgb, var(--rgb-primary) 22%, transparent);
+      }
+    }
+
+    @keyframes dotBeat {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.5); opacity: 0.45; }
+    }
+
+    @keyframes seqSnapPop {
+      0% { transform: scale(0.84); }
+      60% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    body.chroma-active .chroma-target {
+      animation: rgbHueCycle var(--rgb-speed) linear infinite;
+    }
+
+    /* Glassmorphic Tactical RGB Card */
+    .hud-card {
+      background: var(--bg-panel);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-radius: 16px;
+      border: 1px solid color-mix(in srgb, var(--rgb-primary) 26%, var(--border-dim));
+      box-shadow:
+        0 10px 30px -8px rgba(0, 0, 0, 0.72),
+        0 0 calc(14px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) calc(16% * var(--glow-scale)), transparent);
+      transition: border-color 0.2s ease, box-shadow 0.25s ease;
+    }
+
+    .hud-card:hover {
+      border-color: color-mix(in srgb, var(--rgb-primary) 48%, var(--border-dim));
+    }
+
+    /* ==========================================================================
+       1. TOP HUD BAR ("MISSION JEE" AT VERY TOP)
+       ========================================================================== */
+    .top-hud {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 18px;
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-emblem {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--rgb-primary), var(--rgb-secondary));
+      color: #050508;
+      box-shadow: 0 0 calc(16px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 50%, transparent);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-title .accent {
+      color: var(--rgb-primary);
+      text-shadow: 0 0 calc(12px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 55%, transparent);
+    }
+
+    .offline-pill {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.14);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      letter-spacing: 0.03em;
+    }
+
+    .brand-sub {
+      margin: 2px 0 0;
+      font-size: 0.74rem;
+      color: var(--text-sub);
+    }
+
+    /* Live Attack HUD Pill in Header */
+    .live-attack-hud {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: rgba(6, 9, 16, 0.92);
+      border: 1px solid color-mix(in srgb, var(--rgb-primary) 50%, transparent);
+      box-shadow: 0 0 calc(14px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 25%, transparent);
+    }
+
+    .live-attack-hud.hidden {
+      display: none;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--rgb-primary);
+      animation: dotBeat 1.15s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    /* HUD Quick Metrics & Right Clock */
+    .hud-right-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hud-stat-chip {
+      padding: 6px 12px;
+      border-radius: 12px;
+      background: rgba(6, 9, 16, 0.82);
+      border: 1px solid var(--border-dim);
+      display: flex;
+      flex-direction: column;
+      min-width: 84px;
+    }
+
+    .hud-stat-chip span:first-child {
+      font-size: 0.64rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .hud-stat-chip span:last-child {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: var(--text-main);
+      margin-top: 1px;
+    }
+
+    /* Top HUD Settings Gear Button */
+    .btn-settings-gear {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: rgba(6, 9, 16, 0.9);
+      border: 1px solid color-mix(in srgb, var(--rgb-primary) 42%, var(--border-dim));
+      color: var(--text-main);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 calc(12px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 22%, transparent);
+      transition: transform 0.25s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .btn-settings-gear:hover {
+      border-color: var(--rgb-primary);
+      color: var(--rgb-primary);
+      transform: rotate(35deg);
+      box-shadow: 0 0 calc(18px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 48%, transparent);
+    }
+
+    .btn-settings-gear.is-active {
+      background: color-mix(in srgb, var(--rgb-primary) 20%, #050508);
+      border-color: var(--rgb-primary);
+      color: var(--rgb-primary);
+      transform: rotate(90deg);
+      box-shadow: 0 0 calc(20px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 55%, transparent);
+    }
+
+    /* ==========================================================================
+       2. PRIMARY MISSION JEE WORKSPACE (TOP PRIORITY)
+       ========================================================================== */
+    .mission-workspace {
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .workspace-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .section-heading {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .count-badge {
+      font-size: 0.74rem;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-dim);
+      color: var(--rgb-primary);
+    }
+
+    /* Subject Filter Pills Row */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pill-btn {
+      border: 1px solid var(--border-dim);
+      background: rgba(10, 14, 24, 0.85);
+      color: var(--text-sub);
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 5px 11px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+
+    .pill-btn:hover {
+      color: var(--text-main);
+      border-color: color-mix(in srgb, var(--rgb-primary) 45%, transparent);
+    }
+
+    .pill-btn.active {
+      background: var(--rgb-primary);
+      color: #050508;
+      font-weight: 800;
+      border-color: var(--rgb-primary);
+      box-shadow: 0 0 calc(12px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 45%, transparent);
+    }
+
+    /* Mission Creation Form */
+    .mission-composer {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto auto;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(6, 8, 14, 0.78);
+      border: 1px solid var(--border-dim);
+    }
+
+    @media (max-width: 960px) {
+      .mission-composer {
+        grid-template-columns: 1fr 1fr;
+      }
+      .mission-composer .composer-title {
+        grid-column: 1 / -1;
+      }
+      .mission-composer .composer-submit {
+        grid-column: 1 / -1;
+      }
+    }
+
+    .hud-input, .hud-select {
+      width: 100%;
+      padding: 10px 13px;
+      border-radius: 11px;
+      background: var(--bg-input);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 0.86rem;
+      outline: none;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .hud-input:focus, .hud-select:focus {
+      border-color: var(--rgb-primary);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--rgb-primary) 22%, transparent);
+    }
+
+    .hud-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Primary Glowing RGB Button */
+    .btn-rgb {
+      border: none;
+      border-radius: 11px;
+      padding: 10px 18px;
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      color: #050508;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      background: linear-gradient(
+        120deg,
+        var(--rgb-primary),
+        color-mix(in srgb, var(--rgb-secondary) 72%, var(--rgb-primary)),
+        var(--rgb-tertiary)
+      );
+      background-size: 200% 200%;
+      animation: gradientSlide calc(var(--rgb-speed) * 0.85) ease infinite;
+      box-shadow: 0 0 calc(15px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 45%, transparent);
+      transition: transform 0.14s ease, filter 0.14s ease;
+      white-space: nowrap;
+    }
+
+    .btn-rgb:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.08);
+    }
+
+    .btn-rgb:active {
+      transform: scale(0.98);
+    }
+
+    /* Active Mission Cards List + Drag & Drop States */
+    .mission-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+    }
+
+    .mission-item {
+      --subj-bg: #00f5d4;
+      --subj-tint: 16%;
+      position: relative;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: linear-gradient(
+        105deg,
+        color-mix(in srgb, var(--subj-bg) var(--subj-tint), rgba(11, 15, 26, 0.94)) 0%,
+        color-mix(in srgb, var(--subj-bg) calc(var(--subj-tint) * 0.45), rgba(9, 13, 22, 0.92)) 65%,
+        rgba(9, 13, 22, 0.94) 100%
+      );
+      border: 1px solid color-mix(in srgb, var(--subj-bg) 34%, rgba(148, 163, 184, 0.18));
+      border-left: 4px solid var(--subj-bg);
+      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    }
+
+    .mission-item:hover {
+      border-color: color-mix(in srgb, var(--subj-bg) 68%, transparent);
+      transform: translateY(-1px);
+    }
+
+    .mission-item.is-attacking {
+      border-color: var(--rgb-primary);
+      border-left: 5px solid var(--rgb-primary);
+      background: linear-gradient(
+        105deg,
+        color-mix(in srgb, var(--subj-bg) calc(var(--subj-tint) + 8%), rgba(12, 18, 30, 0.97)) 0%,
+        rgba(12, 18, 30, 0.96) 100%
+      );
+      animation: attackGlowPulse 2.1s ease-in-out infinite;
+    }
+
+    /* Drag & Drop Visual Feedback */
+    .mission-item.is-dragging {
+      opacity: 0.42;
+      transform: scale(0.985);
+      border-style: dashed;
+      border-color: var(--rgb-primary);
+      box-shadow: 0 0 24px color-mix(in srgb, var(--rgb-primary) 35%, transparent);
+    }
+
+    .mission-item.drop-above::before,
+    .mission-item.drop-below::after {
+      content: "";
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      height: 3px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--rgb-primary), var(--rgb-tertiary), var(--rgb-primary));
+      box-shadow: 0 0 12px var(--rgb-primary), 0 0 24px var(--rgb-primary);
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .mission-item.drop-above::before {
+      top: -7px;
+    }
+
+    .mission-item.drop-below::after {
+      bottom: -7px;
+    }
+
+    .mission-item.just-reordered .mission-seq-badge {
+      animation: seqSnapPop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Floating Touch / Pointer Drag Ghost */
+    .drag-ghost-clone {
+      position: fixed;
+      z-index: 9999;
+      pointer-events: none;
+      margin: 0;
+      transform: rotate(1.2deg) scale(1.02);
+      box-shadow:
+        0 20px 44px rgba(0, 0, 0, 0.85),
+        0 0 26px color-mix(in srgb, var(--rgb-primary) 55%, transparent);
+      border-color: var(--rgb-primary) !important;
+      opacity: 0.96;
+    }
+
+    /* Tactical Drag Grip + Quick Up/Down Nudge Controls */
+    .reorder-dock {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .drag-grip-handle {
+      width: 26px;
+      height: 44px;
+      border-radius: 9px;
+      background: rgba(5, 8, 15, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      touch-action: none;
+      transition: all 0.16s ease;
+    }
+
+    .drag-grip-handle:hover {
+      color: var(--rgb-primary);
+      border-color: color-mix(in srgb, var(--rgb-primary) 55%, transparent);
+      background: color-mix(in srgb, var(--rgb-primary) 12%, #050508);
+      box-shadow: 0 0 10px color-mix(in srgb, var(--rgb-primary) 28%, transparent);
+    }
+
+    .drag-grip-handle:active {
+      cursor: grabbing;
+      transform: scale(0.95);
+    }
+
+    .nudge-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .btn-nudge {
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      border-radius: 6px;
+      background: rgba(5, 8, 15, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.14s ease;
+    }
+
+    .btn-nudge:hover:not(:disabled) {
+      color: var(--rgb-primary);
+      border-color: var(--rgb-primary);
+      background: color-mix(in srgb, var(--rgb-primary) 16%, #050508);
+    }
+
+    .btn-nudge:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
+    /* Tactical Sequence Number Badge (#01, #02, #03...) */
+    .mission-seq-badge {
+      width: 46px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(5, 8, 15, 0.88);
+      border: 1px solid color-mix(in srgb, var(--subj-bg) 52%, rgba(148, 163, 184, 0.25));
+      color: var(--subj-bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: inset 0 0 10px color-mix(in srgb, var(--subj-bg) 16%, transparent);
+      user-select: none;
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .mission-seq-badge.is-priority-one {
+      border-color: var(--rgb-primary);
+      box-shadow:
+        0 0 12px color-mix(in srgb, var(--rgb-primary) 26%, transparent),
+        inset 0 0 10px color-mix(in srgb, var(--rgb-primary) 18%, transparent);
+    }
+
+    .mission-seq-badge .seq-num {
+      font-size: 0.96rem;
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+
+    .mission-seq-badge .seq-key {
+      font-size: 0.54rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 3px;
+      letter-spacing: 0.04em;
+    }
+
+    .mission-item.is-attacking .mission-seq-badge {
+      background: var(--rgb-primary);
+      color: #050508;
+      border-color: var(--rgb-primary);
+      box-shadow: 0 0 calc(14px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 55%, transparent);
+    }
+
+    .mission-item.is-attacking .mission-seq-badge .seq-key {
+      color: rgba(5, 5, 8, 0.78);
+    }
+
+    .mission-meta-col {
+      flex: 1 1 260px;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .mission-tags-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .tag-chip {
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(5, 8, 15, 0.86);
+      border: 1px solid color-mix(in srgb, var(--subj-bg, var(--rgb-primary)) 45%, rgba(148, 163, 184, 0.25));
+      color: var(--subj-bg, var(--rgb-primary));
+    }
+
+    .priority-one-chip {
+      font-size: 0.62rem;
+      font-weight: 900;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--rgb-primary) 16%, #050508);
+      border: 1px solid color-mix(in srgb, var(--rgb-primary) 55%, transparent);
+      color: var(--rgb-primary);
+      letter-spacing: 0.05em;
+    }
+
+    .status-chip {
+      font-size: 0.66rem;
+      font-weight: 800;
+      padding: 2px 9px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .status-chip.ready {
+      background: rgba(5, 8, 15, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      color: var(--text-sub);
+    }
+
+    .status-chip.attacking {
+      background: color-mix(in srgb, var(--rgb-primary) 18%, #050508);
+      color: var(--rgb-primary);
+      border: 1px solid var(--rgb-primary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .target-chip {
+      font-size: 0.68rem;
+      color: var(--text-sub);
+      background: rgba(5, 8, 15, 0.65);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .mission-title-text {
+      margin: 0;
+      font-size: 1.03rem;
+      font-weight: 800;
+      letter-spacing: 0.01em;
+      color: var(--text-main);
+      word-break: break-word;
+    }
+
+    /* Target Progress Bar on Mission Card */
+    .target-bar-wrap {
+      width: 100%;
+      max-width: 340px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.14);
+      overflow: hidden;
+    }
+
+    .target-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--subj-bg, var(--rgb-primary)), var(--rgb-secondary));
+      transition: width 0.3s ease;
+    }
+
+    /* Right Controls on Mission Card */
+    .mission-controls-col {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .clock-box {
+      padding: 6px 12px;
+      border-radius: 11px;
+      background: rgba(4, 6, 11, 0.92);
+      border: 1px solid var(--border-dim);
+      text-align: center;
+      min-width: 114px;
+    }
+
+    .clock-box .lbl {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-muted);
+    }
+
+    .clock-box .val {
+      font-size: 1.02rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .mission-item.is-attacking .clock-box .val {
+      color: var(--rgb-primary);
+    }
+
+    .btn-action {
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-pause {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.45);
+    }
+
+    .btn-pause:hover {
+      background: rgba(245, 158, 11, 0.26);
+    }
+
+    .btn-done {
+      background: rgba(16, 185, 129, 0.16);
+      color: #6ee7b7;
+      border: 1px solid rgba(16, 185, 129, 0.45);
+    }
+
+    .btn-done:hover {
+      background: rgba(16, 185, 129, 0.28);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-icon-del {
+      padding: 9px 10px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid var(--border-dim);
+      color: var(--text-sub);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+
+    .btn-icon-del:hover {
+      color: #fda4af;
+      border-color: rgba(244, 63, 94, 0.45);
+      background: rgba(136, 19, 55, 0.25);
+    }
+
+    /* ==========================================================================
+       3. COLLAPSIBLE FOLDER ACCORDIONS (THEME STUDIO & HISTORY FOLDER)
+       ========================================================================== */
+    .folder-card {
+      overflow: hidden;
+    }
+
+    .folder-header-btn {
+      width: 100%;
+      padding: 14px 20px;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      cursor: pointer;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      text-align: left;
+      transition: background 0.18s ease;
+    }
+
+    .folder-header-btn:hover {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .folder-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .folder-icon-box {
+      width: 38px;
+      height: 38px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(6, 9, 16, 0.92);
+      border: 1px solid color-mix(in srgb, var(--rgb-primary) 40%, transparent);
+      color: var(--rgb-primary);
+      flex-shrink: 0;
+    }
+
+    .folder-title {
+      font-size: 0.98rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .folder-desc {
+      font-size: 0.74rem;
+      color: var(--text-sub);
+      margin-top: 2px;
+    }
+
+    .folder-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .on-off-badge {
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      padding: 4px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--border-dim);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-sub);
+      transition: all 0.2s ease;
+    }
+
+    .on-off-badge.is-on {
+      background: color-mix(in srgb, var(--rgb-primary) 20%, #050508);
+      color: var(--rgb-primary);
+      border-color: var(--rgb-primary);
+      box-shadow: 0 0 calc(10px * var(--glow-scale)) color-mix(in srgb, var(--rgb-primary) 35%, transparent);
+    }
+
+    .chevron-icon {
+      width: 18px;
+      height: 18px;
+      color: var(--text-sub);
+      transition: transform 0.25s ease;
+    }
+
+    .folder-card.is-open .chevron-icon {
+      transform: rotate(180deg);
+      color: var(--rgb-primary);
+    }
+
+    .folder-body {
+      display: none;
+      padding: 0 20px 20px;
+      border-top: 1px solid var(--border-dim);
+    }
+
+    .folder-card.is-open .folder-body {
+      display: block;
+    }
+
+    /* ==========================================================================
+       4. THEME & STUDIO CONTROLS GRID (INSIDE COLLAPSIBLE FOLDER)
+       ========================================================================== */
+    .studio-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(275px, 1fr));
+      gap: 14px;
+      padding-top: 16px;
+    }
+
+    .studio-box {
+      padding: 14px;
+      border-radius: 13px;
+      background: rgba(6, 9, 16, 0.82);
+      border: 1px solid var(--border-dim);
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .studio-box-title {
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--text-sub);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .subject-theme-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .subj-color-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 6px 9px;
+      border-radius: 9px;
+      background: rgba(11, 15, 26, 0.88);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .subj-color-row input[type="color"] {
+      width: 24px;
+      height: 22px;
+      border: none;
+      padding: 0;
+      background: transparent;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .preset-swatches {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 7px;
+    }
+
+    .swatch-btn {
+      height: 32px;
+      border-radius: 9px;
+      border: 2px solid rgba(255, 255, 255, 0.16);
+      cursor: pointer;
+      transition: transform 0.14s ease, border-color 0.14s ease;
+    }
+
+    .swatch-btn:hover {
+      transform: scale(1.07);
+      border-color: #ffffff;
+    }
+
+    .swatch-btn.active {
+      border-color: #ffffff;
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.45);
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.8rem;
+      color: var(--text-main);
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-sub);
+    }
+
+    input[type="range"].studio-range {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.22);
+      outline: none;
+    }
+
+    input[type="range"].studio-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--rgb-primary);
+      cursor: pointer;
+      border: 2px solid #050508;
+      box-shadow: 0 0 8px var(--rgb-primary);
+    }
+
+    .wallpaper-dropzone {
+      border: 1px dashed color-mix(in srgb, var(--rgb-primary) 50%, rgba(148, 163, 184, 0.3));
+      border-radius: 11px;
+      padding: 12px;
+      background: rgba(11, 15, 26, 0.75);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .wallpaper-dropzone:hover {
+      background: rgba(16, 22, 38, 0.92);
+      border-color: var(--rgb-primary);
+    }
+
+    .btn-subtle {
+      padding: 7px 12px;
+      border-radius: 9px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-dim);
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-subtle:hover {
+      border-color: var(--rgb-primary);
+      color: var(--rgb-primary);
+    }
+
+    .btn-danger-subtle {
+      padding: 7px 12px;
+      border-radius: 9px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(136, 19, 55, 0.22);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      color: #fda4af;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-danger-subtle:hover {
+      background: rgba(136, 19, 55, 0.4);
+    }
+
+    .btn-danger-subtle.is-armed {
+      background: rgba(225, 29, 72, 0.85);
+      border-color: #fda4af;
+      color: #ffffff;
+      box-shadow: 0 0 14px rgba(244, 63, 94, 0.45);
+    }
+
+    .btn-mini-danger {
+      padding: 4px 9px;
+      border-radius: 7px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: rgba(136, 19, 55, 0.2);
+      border: 1px solid rgba(244, 63, 94, 0.32);
+      color: #fda4af;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-mini-danger:hover {
+      background: rgba(136, 19, 55, 0.38);
+      border-color: rgba(244, 63, 94, 0.55);
+    }
+
+    .btn-mini-danger.is-armed {
+      background: rgba(225, 29, 72, 0.88);
+      border-color: #fecdd3;
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(244, 63, 94, 0.45);
+    }
+
+    .btn-hist-del {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--border-dim);
+      color: var(--text-sub);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .btn-hist-del:hover {
+      color: #fda4af;
+      border-color: rgba(244, 63, 94, 0.5);
+      background: rgba(136, 19, 55, 0.32);
+    }
+
+    /* Switch Toggle */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: rgba(30, 41, 59, 0.95);
+      border: 1px solid var(--border-dim);
+      border-radius: 999px;
+      transition: 0.2s;
+    }
+
+    .toggle-slider::before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: #cbd5e1;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: color-mix(in srgb, var(--rgb-primary) 30%, #050508);
+      border-color: var(--rgb-primary);
+    }
+
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(18px);
+      background-color: var(--rgb-primary);
+    }
+
+    /* ==========================================================================
+       5. HISTORY FOLDER: 7-DAY GRAPH + DAILY LOGS
+       ========================================================================== */
+    .history-inner {
+      padding-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .week-nav-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 13px;
+      background: rgba(6, 9, 16, 0.85);
+      border: 1px solid var(--border-dim);
+    }
+
+    .week-nav-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .week-range-pill {
+      padding: 6px 13px;
+      border-radius: 9px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--border-dim);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .metric-switch {
+      display: inline-flex;
+      padding: 3px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--border-dim);
+    }
+
+    .metric-switch button {
+      border: none;
+      background: transparent;
+      color: var(--text-sub);
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .metric-switch button.active {
+      background: color-mix(in srgb, var(--rgb-primary) 22%, #050508);
+      color: var(--rgb-primary);
+    }
+
+    .graph-stage {
+      padding: 16px;
+      border-radius: 15px;
+      background: rgba(5, 7, 13, 0.92);
+      border: 1px solid var(--border-dim);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .week-kpis {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    @media (max-width: 600px) {
+      .week-kpis {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .kpi-tile {
+      padding: 10px 14px;
+      border-radius: 11px;
+      background: rgba(11, 15, 26, 0.85);
+      border: 1px solid var(--border-dim);
+    }
+
+    .kpi-tile .k-lbl {
+      font-size: 0.7rem;
+      color: var(--text-sub);
+    }
+
+    .kpi-tile .k-val {
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+
+    .svg-scroll-wrap {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    #consistencySvg {
+      width: 100%;
+      min-width: 540px;
+      height: 265px;
+      display: block;
+      user-select: none;
+    }
+
+    .day-pills-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .day-cards-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .day-log-card {
+      padding: 14px 16px;
+      border-radius: 13px;
+      background: rgba(7, 10, 18, 0.88);
+      border: 1px solid var(--border-dim);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .day-log-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .day-mission-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 10px;
+      background: rgba(15, 21, 36, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    #graphTooltip {
+      position: fixed;
+      z-index: 60;
+      pointer-events: none;
+      display: none;
+      padding: 10px 13px;
+      border-radius: 11px;
+      background: rgba(5, 7, 13, 0.96);
+      border: 1px solid var(--rgb-primary);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.8);
+      font-size: 0.76rem;
+      color: var(--text-main);
+    }
+
+    #toastStack {
+      position: fixed;
+      bottom: 18px;
+      right: 18px;
+      z-index: 70;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 340px;
+      pointer-events: none;
+    }
+
+    .toast-msg {
+      pointer-events: auto;
+      padding: 10px 14px;
+      border-radius: 11px;
+      background: rgba(6, 9, 16, 0.96);
+      border: 1px solid var(--rgb-primary);
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.75);
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .empty-state-box {
+      padding: 28px 18px;
+      border-radius: 14px;
+      border: 1px dashed rgba(148, 163, 184, 0.24);
+      background: rgba(6, 8, 14, 0.55);
+      text-align: center;
+      color: var(--text-sub);
+      font-size: 0.84rem;
+    }
+  </style>
+</head>
+<body class="tactical-grid">
+  <!-- Fullscreen Custom Wallpaper & Tint Layers -->
+  <div id="wallpaperLayer" aria-hidden="true"></div>
+  <div id="wallpaperVeil" aria-hidden="true"></div>
+
+  <!-- Graph Hover Tooltip & Non-Blocking Toast Container -->
+  <div id="graphTooltip"></div>
+  <div id="toastStack" aria-live="polite"></div>
+
+  <div class="app-shell">
+    <!-- ======================================================================
+         1. TOP HUD HEADER ("MISSION JEE" AT THE VERY TOP)
+         ====================================================================== -->
+    <header class="hud-card top-hud">
+      <div class="brand-cluster">
+        <div class="brand-emblem chroma-target">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">
+            <span>MISSION <span class="accent">JEE</span></span>
+            <span class="offline-pill">100% OFFLINE</span>
+          </h1>
+          <p class="brand-sub" id="hudDateSub">Tactical Study & Deep Work Command Center</p>
+        </div>
+      </div>
+
+      <!-- Center Live Attack Banner (Appears automatically when a mission is under ATTACK) -->
+      <div id="liveAttackBanner" class="live-attack-hud hidden">
+        <span class="pulse-dot"></span>
+        <span style="font-size: 0.72rem; color: var(--text-sub); font-weight: 700;">ATTACKING:</span>
+        <span
+          id="bannerMissionTitle"
+          style="font-size: 0.82rem; font-weight: 800; max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+        >—</span>
+        <span
+          id="bannerMissionClock"
+          class="mono"
+          style="font-size: 0.86rem; font-weight: 800; color: var(--rgb-primary); background: rgba(0,0,0,0.55); padding: 2px 8px; border-radius: 6px;"
+        >00:00:00</span>
+      </div>
+
+      <!-- Right HUD Telemetry Chips -->
+      <div class="hud-right-group">
+        <div class="hud-stat-chip">
+          <span>Done Today</span>
+          <span id="hudDoneToday" class="mono">0</span>
+        </div>
+        <div class="hud-stat-chip">
+          <span>Focus Today</span>
+          <span id="hudFocusToday" class="mono" style="color: var(--rgb-primary);">0m 00s</span>
+        </div>
+        <div class="hud-stat-chip">
+          <span>HUD Clock</span>
+          <span id="hudLiveClock" class="mono">--:--:--</span>
+        </div>
+        <button
+          id="topSettingsGearBtn"
+          type="button"
+          class="btn-settings-gear"
+          title="Theme & Studio Settings (ON/OFF)"
+          aria-label="Toggle Theme and Studio Settings"
+          aria-expanded="false"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ======================================================================
+         2. PRIMARY MISSION JEE WORKSPACE (ACTIVE MISSIONS FRONT & CENTER)
+         ====================================================================== -->
+    <main class="hud-card mission-workspace" aria-label="Mission JEE Workspace">
+      <div class="workspace-header">
+        <div>
+          <h2 class="section-heading">
+            <span>Mission JEE Queue</span>
+            <span id="activeMissionBadge" class="count-badge mono">0 Active</span>
+          </h2>
+          <p style="margin: 3px 0 0; font-size: 0.76rem; color: var(--text-sub);">
+            Drag grip <strong style="color: var(--rgb-primary);">⋮⋮</strong> (or use <strong style="color: var(--text-main);">▲/▼</strong>) to reorder missions — top slot auto-becomes <strong style="color: var(--rgb-primary);">#01 (KEY 1)</strong>. Press <strong style="color: var(--rgb-primary);">1–9</strong> to <strong style="color: var(--text-main);">ATTACK</strong>.
+          </p>
+        </div>
+
+        <!-- Subject Filter Pills -->
+        <div id="subjectFilterBar" class="filter-bar" role="tablist" aria-label="Subject Filter"></div>
+      </div>
+
+      <!-- Mission Creation Bar -->
+      <form id="missionCreateForm" class="mission-composer">
+        <input
+          id="missionTitleInput"
+          class="hud-input composer-title"
+          type="text"
+          placeholder="New Mission (e.g., Rotational Dynamics 35 PYQs, Integration Sheet, Organic Reagents)..."
+          required
+        />
+
+        <select id="missionSubjectSelect" class="hud-select" aria-label="Subject Tag">
+          <option value="Physics">⚛️ Physics</option>
+          <option value="Maths">📐 Maths</option>
+          <option value="Organic Chem">🧪 Organic Chem</option>
+          <option value="Physical/Inorg">⚗️ Physical/Inorg</option>
+          <option value="Mock / PYQ">🎯 Mock / PYQ</option>
+          <option value="General">⚡ General</option>
+        </select>
+
+        <select id="missionTargetSelect" class="hud-select" aria-label="Optional Target Duration">
+          <option value="0">⏱ No Target</option>
+          <option value="30">⏱ 30 mins</option>
+          <option value="45">⏱ 45 mins</option>
+          <option value="60">⏱ 60 mins</option>
+          <option value="90">⏱ 90 mins</option>
+          <option value="120">⏱ 120 mins</option>
+          <option value="180">⏱ 180 mins (Mock)</option>
+        </select>
+
+        <label
+          style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-sub); padding: 0 6px; cursor: pointer; white-space: nowrap;"
+          title="Automatically pause any other active mission when you hit ATTACK"
+        >
+          <input id="singleFocusCheckbox" type="checkbox" checked style="accent-color: var(--rgb-primary);" />
+          <span>Single Focus</span>
+        </label>
+
+        <button type="submit" class="btn-rgb composer-submit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>Add Mission</span>
+        </button>
+      </form>
+
+      <!-- Active Missions List (Drag & Drop Reorderable + Auto #01..#99 Numbering) -->
+      <div id="activeMissionsContainer" class="mission-list"></div>
+    </main>
+
+    <!-- ======================================================================
+         3. COLLAPSIBLE FOLDER: THEME & STUDIO CONTROLS (ON / OFF DRAWER)
+         ====================================================================== -->
+    <section id="themeFolderCard" class="hud-card folder-card" aria-label="Theme and Studio Controls Folder">
+      <button
+        id="themeFolderToggleBtn"
+        type="button"
+        class="folder-header-btn"
+        aria-expanded="false"
+        aria-controls="themeFolderBody"
+      >
+        <div class="folder-left">
+          <div class="folder-icon-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            </svg>
+          </div>
+          <div>
+            <div class="folder-title">
+              <span>Theme &amp; Studio Controls Folder</span>
+            </div>
+            <div class="folder-desc">
+              Subject-Wise Mission Card Backgrounds, Custom PC Wallpaper, RGB Glow Presets &amp; Offline Vault
+            </div>
+          </div>
+        </div>
+
+        <div class="folder-right">
+          <span id="themeFolderStateBadge" class="on-off-badge mono">OFF</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+
+      <div id="themeFolderBody" class="folder-body">
+        <div class="studio-grid">
+          <!-- Column 1: RGB Presets, Custom Accent & Glow Intensity -->
+          <div class="studio-box">
+            <div class="studio-box-title">
+              <span>RGB Neon Accent &amp; Glow</span>
+              <span id="glowPctLabel" class="mono" style="color: var(--rgb-primary);">100%</span>
+            </div>
+
+            <div class="preset-swatches" id="rgbPresetSwatches">
+              <button
+                type="button"
+                class="swatch-btn"
+                data-name="Neon Cyan"
+                data-p="#00f5d4"
+                data-s="#7b2cbf"
+                data-t="#00bbf9"
+                title="Neon Cyan"
+                style="background: linear-gradient(135deg, #00f5d4, #00bbf9);"
+              ></button>
+              <button
+                type="button"
+                class="swatch-btn"
+                data-name="Matrix Green"
+                data-p="#22ff88"
+                data-s="#00b4d8"
+                data-t="#aacc00"
+                title="Matrix Green"
+                style="background: linear-gradient(135deg, #22ff88, #00b4d8);"
+              ></button>
+              <button
+                type="button"
+                class="swatch-btn"
+                data-name="Cyberpunk Crimson"
+                data-p="#ff2a6d"
+                data-s="#7b2cbf"
+                data-t="#ff758f"
+                title="Cyberpunk Crimson"
+                style="background: linear-gradient(135deg, #ff2a6d, #7b2cbf);"
+              ></button>
+              <button
+                type="button"
+                class="swatch-btn"
+                data-name="Electric Gold"
+                data-p="#ffb703"
+                data-s="#fb8500"
+                data-t="#ffd166"
+                title="Electric Gold"
+                style="background: linear-gradient(135deg, #ffb703, #fb8500);"
+              ></button>
+              <button
+                type="button"
+                class="swatch-btn"
+                data-name="Ultraviolet"
+                data-p="#b5179e"
+                data-s="#4361ee"
+                data-t="#f72585"
+                title="Ultraviolet"
+                style="background: linear-gradient(135deg, #b5179e, #4361ee);"
+              ></button>
+              <button
+                type="button"
+                class="swatch-btn"
+                data-name="RGB Chroma Cycle"
+                data-chroma="true"
+                data-p="#00f5d4"
+                data-s="#ff2a85"
+                data-t="#ffbe0b"
+                title="RGB Chroma Cycle"
+                style="background: conic-gradient(#ff2a85, #ffbe0b, #22ff88, #00f5d4, #7b2cbf, #ff2a85);"
+              ></button>
+            </div>
+
+            <div class="control-row">
+              <span>Custom Hex Accent</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <input
+                  id="customAccentPicker"
+                  type="color"
+                  value="#00f5d4"
+                  style="width: 30px; height: 26px; border: none; background: transparent; cursor: pointer;"
+                />
+                <span id="customAccentHex" class="mono" style="font-size: 0.74rem; color: var(--text-sub);">#00F5D4</span>
+              </div>
+            </div>
+
+            <div class="control-row">
+              <span>RGB Chroma Cycle Mode</span>
+              <label class="toggle-switch">
+                <input id="chromaCycleToggle" type="checkbox" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>RGB Glow Intensity</span>
+                <span id="glowSliderVal" class="mono">100%</span>
+              </div>
+              <input id="glowRangeInput" class="studio-range" type="range" min="0" max="160" step="5" value="100" />
+            </div>
+          </div>
+
+          <!-- Column 2: Subject-Wise Mission Card Background Theme Studio -->
+          <div class="studio-box">
+            <div class="studio-box-title">
+              <span>Subject Card Backgrounds</span>
+              <span id="subjTintLabel" class="mono" style="color: var(--rgb-primary);">22%</span>
+            </div>
+
+            <div class="subject-theme-grid" id="subjectThemePickers">
+              <label class="subj-color-row">
+                <span>⚛️ Physics</span>
+                <input type="color" data-subj-color="Physics" value="#00f5d4" />
+              </label>
+              <label class="subj-color-row">
+                <span>📐 Maths</span>
+                <input type="color" data-subj-color="Maths" value="#ffb703" />
+              </label>
+              <label class="subj-color-row">
+                <span>🧪 Organic Chem</span>
+                <input type="color" data-subj-color="Organic Chem" value="#22ff88" />
+              </label>
+              <label class="subj-color-row">
+                <span>⚗️ Physical/Inorg</span>
+                <input type="color" data-subj-color="Physical/Inorg" value="#b5179e" />
+              </label>
+              <label class="subj-color-row">
+                <span>🎯 Mock / PYQ</span>
+                <input type="color" data-subj-color="Mock / PYQ" value="#ff2a6d" />
+              </label>
+              <label class="subj-color-row">
+                <span>⚡ General</span>
+                <input type="color" data-subj-color="General" value="#38bdf8" />
+              </label>
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>Card Background Tint Opacity</span>
+                <span id="subjTintSliderVal" class="mono">22%</span>
+              </div>
+              <input id="subjTintRange" class="studio-range" type="range" min="0" max="65" step="2" value="22" />
+            </div>
+
+            <div style="display: flex; justify-content: flex-end;">
+              <button id="resetSubjectThemesBtn" type="button" class="btn-subtle">
+                ↺ Reset Subject Themes
+              </button>
+            </div>
+          </div>
+
+          <!-- Column 3: Custom Local Background Image Uploader + Dim & Blur -->
+          <div class="studio-box">
+            <div class="studio-box-title">
+              <span>Custom PC Wallpaper</span>
+              <span id="wallpaperStatusTag" class="mono" style="color: var(--text-muted);">None</span>
+            </div>
+
+            <label class="wallpaper-dropzone" for="wallpaperFileInput">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--rgb-primary);">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-main);">
+                Choose Wallpaper from Your Files
+              </span>
+              <span style="font-size: 0.69rem; color: var(--text-sub);">
+                PNG, JPG, WEBP • Auto-optimized offline for instant reload
+              </span>
+              <input id="wallpaperFileInput" type="file" accept="image/*" style="display: none;" />
+            </label>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>Background Dark Tint / Dim</span>
+                <span id="wallDimVal" class="mono">78%</span>
+              </div>
+              <input id="wallDimRange" class="studio-range" type="range" min="20" max="95" step="1" value="78" />
+            </div>
+
+            <div class="slider-group">
+              <div class="slider-header">
+                <span>Background Blur</span>
+                <span id="wallBlurVal" class="mono">4px</span>
+              </div>
+              <input id="wallBlurRange" class="studio-range" type="range" min="0" max="20" step="1" value="4" />
+            </div>
+
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+              <button id="removeWallpaperBtn" type="button" class="btn-danger-subtle">
+                Reset / Remove Wallpaper
+              </button>
+            </div>
+          </div>
+
+          <!-- Column 4: Tactical Audio, Grid & Offline Data Utilities -->
+          <div class="studio-box">
+            <div class="studio-box-title">
+              <span>Studio Audio &amp; Offline Vault</span>
+              <span class="mono" style="color: #6ee7b7;">LOCALSTORAGE</span>
+            </div>
+
+            <div class="control-row">
+              <div>
+                <div style="font-weight: 600;">Tactical Sound Cues</div>
+                <div style="font-size: 0.7rem; color: var(--text-sub);">Offline Web Audio synth on Attack / Done / Reorder</div>
+              </div>
+              <label class="toggle-switch">
+                <input id="soundToggle" type="checkbox" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div class="control-row">
+              <div>
+                <div style="font-weight: 600;">Tactical Coordinate Grid</div>
+                <div style="font-size: 0.7rem; color: var(--text-sub);">Subtle HUD matrix lines</div>
+              </div>
+              <label class="toggle-switch">
+                <input id="gridToggle" type="checkbox" checked />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 7px; margin-top: 4px;">
+              <button id="exportJsonBtn" type="button" class="btn-subtle">
+                ↓ Export Offline Backup (.JSON)
+              </button>
+              <button id="loadSampleBtn" type="button" class="btn-subtle">
+                ✦ Load Sample 7-Day JEE Consistency Data
+              </button>
+              <button id="resetAllBtn" type="button" class="btn-danger-subtle" data-confirm-step="0">
+                ✕ Total Reset (Wipe All Data)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         4. COLLAPSIBLE BOTTOM FOLDER: HISTORY FOLDER & 7-DAY GRAPH
+         ====================================================================== -->
+    <section id="historyFolderCard" class="hud-card folder-card is-open" aria-label="History Folder">
+      <button
+        id="historyFolderToggleBtn"
+        type="button"
+        class="folder-header-btn"
+        aria-expanded="true"
+        aria-controls="historyFolderBody"
+      >
+        <div class="folder-left">
+          <div class="folder-icon-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+            </svg>
+          </div>
+          <div>
+            <div class="folder-title">
+              <span>History Folder</span>
+              <span id="historyTotalBadge" class="count-badge mono">0 Completed</span>
+            </div>
+            <div class="folder-desc">
+              7-Day Weekwise Consistency Graph &amp; Day-by-Day Mission Time Logs (Click to Open / Close)
+            </div>
+          </div>
+        </div>
+
+        <div class="folder-right">
+          <span id="historyFolderStateBadge" class="on-off-badge is-on mono">OPEN</span>
+          <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </button>
+
+      <div id="historyFolderBody" class="folder-body">
+        <div class="history-inner">
+          <!-- Weekwise Navigation & Metric Switch -->
+          <div class="week-nav-bar">
+            <div class="week-nav-controls">
+              <button id="prevWeekBtn" type="button" class="btn-subtle">← Prev Week</button>
+              <div id="weekRangeText" class="week-range-pill mono">—</div>
+              <button id="nextWeekBtn" type="button" class="btn-subtle">Next Week →</button>
+              <button id="currentWeekBtn" type="button" class="btn-subtle" style="color: var(--rgb-primary);">This Week</button>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+              <div class="metric-switch" role="group" aria-label="Graph Metric">
+                <button id="metricMissionsBtn" type="button" class="active">Missions Completed</button>
+                <button id="metricHoursBtn" type="button">Focus Hours</button>
+              </div>
+              <button id="clearAllHistoryBtn" type="button" class="btn-danger-subtle" data-confirm-step="0">
+                ✕ Clear History
+              </button>
+            </div>
+          </div>
+
+          <!-- TOP INSIDE HISTORY: 7-Day Performance & Consistency Graph -->
+          <div class="graph-stage">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+              <div>
+                <h3 style="margin: 0; font-size: 0.96rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                  <span style="color: var(--rgb-primary);">📈</span>
+                  <span>7-Day Performance &amp; Consistency Graph</span>
+                </h3>
+                <p id="graphCaptionText" style="margin: 2px 0 0; font-size: 0.73rem; color: var(--text-sub);">
+                  Daily completed missions trajectory across strictly 7 days
+                </p>
+              </div>
+              <span
+                class="mono"
+                style="font-size: 0.7rem; padding: 4px 10px; border-radius: 999px; background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-dim); color: var(--rgb-primary);"
+              >
+                🔥 Consistency Analytics
+              </span>
+            </div>
+
+            <div class="week-kpis">
+              <div class="kpi-tile">
+                <div class="k-lbl">7-Day Missions Done</div>
+                <div id="kpiWeekMissions" class="k-val mono">0</div>
+              </div>
+              <div class="kpi-tile">
+                <div class="k-lbl">7-Day Total Focus Time</div>
+                <div id="kpiWeekTime" class="k-val mono" style="color: var(--rgb-primary);">0h 00m</div>
+              </div>
+              <div class="kpi-tile">
+                <div class="k-lbl">Consistency Streak (Days)</div>
+                <div id="kpiWeekDays" class="k-val mono" style="color: #6ee7b7;">0 / 7</div>
+              </div>
+            </div>
+
+            <div class="svg-scroll-wrap">
+              <svg
+                id="consistencySvg"
+                viewBox="0 0 820 265"
+                role="img"
+                aria-label="7-day performance graph"
+              ></svg>
+            </div>
+          </div>
+
+          <!-- BOTTOM INSIDE HISTORY: Chronological Day-by-Day Mission Logs -->
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px;">
+              <h3 style="margin: 0; font-size: 0.94rem; font-weight: 800;">
+                Day-by-Day Mission &amp; Time Breakdown
+              </h3>
+              <div id="dayFilterPills" class="day-pills-row"></div>
+            </div>
+
+            <div id="dayBreakdownList" class="day-cards-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========================================================================
+       100% VANILLA OFFLINE JAVASCRIPT ENGINE
+       ======================================================================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      const STATE_KEY = 'mission_jee_cmd_v2';
+      const WALLPAPER_KEY = 'mission_jee_wallpaper_v2';
+
+      const DEFAULT_SUBJECT_COLORS = {
+        Physics: '#00f5d4',
+        Maths: '#ffb703',
+        'Organic Chem': '#22ff88',
+        'Physical/Inorg': '#b5179e',
+        'Mock / PYQ': '#ff2a6d',
+        General: '#38bdf8',
+      };
+
+      const DEFAULT_SETTINGS = {
+        primaryColor: '#00f5d4',
+        secondaryColor: '#7b2cbf',
+        tertiaryColor: '#ff2a85',
+        chromaCycle: false,
+        glowIntensity: 100,
+        wallDim: 78,
+        wallBlur: 4,
+        soundEnabled: true,
+        gridEnabled: true,
+        singleFocus: true,
+        themeFolderOpen: false,
+        historyFolderOpen: true,
+        subjectColors: { ...DEFAULT_SUBJECT_COLORS },
+        subjectTintOpacity: 22,
+      };
+
+      function buildInitialState() {
+        return {
+          settings: {
+            ...DEFAULT_SETTINGS,
+            subjectColors: { ...DEFAULT_SUBJECT_COLORS },
+          },
+          subjectFilter: 'All',
+          weekOffset: 0,
+          graphMetric: 'missions',
+          focusedDayKey: null,
+          activeMissions: [],
+          historyByDate: {},
+        };
+      }
+
+      let state = loadAppState();
+      let sessionWallpaperDataUrl = loadWallpaperDataUrl();
+      let lastReorderedMissionId = null;
+
+      // ======================================================================
+      // DATE & DURATION UTILITIES
+      // ======================================================================
+      function getLocalDateKey(dateObj = new Date()) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+
+      function parseDateKey(dateKey) {
+        const [y, m, d] = dateKey.split('-').map(Number);
+        return new Date(y, m - 1, d);
+      }
+
+      function formatShortDay(dateKey) {
+        const dt = parseDateKey(dateKey);
+        return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+      }
+
+      function formatVerboseDay(dateKey) {
+        const dt = parseDateKey(dateKey);
+        const todayKey = getLocalDateKey(new Date());
+        const yest = new Date();
+        yest.setDate(yest.getDate() - 1);
+        const yestKey = getLocalDateKey(yest);
+
+        const label = dt.toLocaleDateString('en-GB', {
+          weekday: 'short',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        });
+
+        if (dateKey === todayKey) return `${label} • Today`;
+        if (dateKey === yestKey) return `${label} • Yesterday`;
+        return label;
+      }
+
+      function formatClockTime(timestampMs) {
+        if (!timestampMs) return '';
+        return new Date(timestampMs).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+
+      function formatHHMMSS(ms) {
+        const totalSec = Math.max(0, Math.floor(ms / 1000));
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        return [
+          String(h).padStart(2, '0'),
+          String(m).padStart(2, '0'),
+          String(s).padStart(2, '0'),
+        ].join(':');
+      }
+
+      function formatHoursMins(ms) {
+        const totalSec = Math.max(0, Math.floor(ms / 1000));
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        if (h > 0) return `${h}h ${String(m).padStart(2, '0')}m`;
+        if (m > 0) return `${m}m ${String(s).padStart(2, '0')}s`;
+        return `${s}s`;
+      }
+
+      function computeMissionElapsedMs(mission, nowMs = Date.now()) {
+        const base = Number(mission.elapsedBeforePause) || 0;
+        if (mission.isAttacking && mission.attackStartTime) {
+          return base + Math.max(0, nowMs - Number(mission.attackStartTime));
+        }
+        return base;
+      }
+
+      function getSubjectBgColor(subject) {
+        const map = state.settings.subjectColors || DEFAULT_SUBJECT_COLORS;
+        return map[subject] || DEFAULT_SUBJECT_COLORS[subject] || state.settings.primaryColor;
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      // ======================================================================
+      // OFFLINE PERSISTENCE & WALLPAPER CANVAS OPTIMIZER
+      // ======================================================================
+      function loadAppState() {
+        try {
+          const raw = localStorage.getItem(STATE_KEY);
+          if (!raw) return buildInitialState();
+          const parsed = JSON.parse(raw);
+          const base = buildInitialState();
+          const parsedSettings = parsed.settings || {};
+          return {
+            ...base,
+            ...parsed,
+            settings: {
+              ...DEFAULT_SETTINGS,
+              ...parsedSettings,
+              subjectColors: {
+                ...DEFAULT_SUBJECT_COLORS,
+                ...(parsedSettings.subjectColors || {}),
+              },
+            },
+            activeMissions: Array.isArray(parsed.activeMissions) ? parsed.activeMissions : [],
+            historyByDate:
+              parsed.historyByDate && typeof parsed.historyByDate === 'object'
+                ? parsed.historyByDate
+                : {},
+          };
+        } catch (err) {
+          return buildInitialState();
+        }
+      }
+
+      function saveAppState() {
+        try {
+          localStorage.setItem(STATE_KEY, JSON.stringify(state));
+        } catch (err) {
+          showToast('Storage warning: browser storage limit reached.');
+        }
+      }
+
+      function loadWallpaperDataUrl() {
+        try {
+          return localStorage.getItem(WALLPAPER_KEY) || '';
+        } catch (err) {
+          return '';
+        }
+      }
+
+      function persistWallpaperDataUrl(dataUrl) {
+        sessionWallpaperDataUrl = dataUrl || '';
+        try {
+          if (!dataUrl) {
+            localStorage.removeItem(WALLPAPER_KEY);
+          } else {
+            localStorage.setItem(WALLPAPER_KEY, dataUrl);
+          }
+          return true;
+        } catch (err) {
+          return false;
+        }
+      }
+
+      function optimizeImageFileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('Could not read file.'));
+          reader.onload = (ev) => {
+            const rawDataUrl = ev.target.result;
+            const img = new Image();
+            img.onerror = () => resolve(rawDataUrl);
+            img.onload = () => {
+              const maxDim = 1920;
+              let w = img.naturalWidth || img.width;
+              let h = img.naturalHeight || img.height;
+
+              if (w > maxDim || h > maxDim) {
+                if (w >= h) {
+                  h = Math.round((h * maxDim) / w);
+                  w = maxDim;
+                } else {
+                  w = Math.round((w * maxDim) / h);
+                  h = maxDim;
+                }
+              }
+
+              const canvas = document.createElement('canvas');
+              canvas.width = w;
+              canvas.height = h;
+              const ctx = canvas.getContext('2d');
+              if (!ctx) {
+                resolve(rawDataUrl);
+                return;
+              }
+              ctx.drawImage(img, 0, 0, w, h);
+              try {
+                const compressed = canvas.toDataURL('image/jpeg', 0.84);
+                resolve(compressed);
+              } catch (e) {
+                resolve(rawDataUrl);
+              }
+            };
+            img.src = rawDataUrl;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      // ======================================================================
+      // OFFLINE WEB AUDIO TACTICAL SOUND SYNTHESIZER
+      // ======================================================================
+      let audioCtx = null;
+
+      function playTacticalTone(kind) {
+        if (!state.settings.soundEnabled) return;
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+          if (!audioCtx) audioCtx = new AudioContextClass();
+          if (audioCtx.state === 'suspended') audioCtx.resume();
+
+          const now = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          if (kind === 'attack') {
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(320, now);
+            osc.frequency.exponentialRampToValueAtTime(680, now + 0.14);
+            gain.gain.setValueAtTime(0.06, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+            osc.start(now);
+            osc.stop(now + 0.17);
+          } else if (kind === 'done') {
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(523.25, now);
+            osc.frequency.setValueAtTime(659.25, now + 0.08);
+            osc.frequency.setValueAtTime(783.99, now + 0.16);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+            osc.start(now);
+            osc.stop(now + 0.34);
+          } else if (kind === 'reorder') {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(540, now);
+            osc.frequency.exponentialRampToValueAtTime(760, now + 0.065);
+            gain.gain.setValueAtTime(0.045, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            osc.start(now);
+            osc.stop(now + 0.09);
+          } else {
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(420, now);
+            osc.frequency.exponentialRampToValueAtTime(260, now + 0.11);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            osc.start(now);
+            osc.stop(now + 0.13);
+          }
+        } catch (err) {
+          // Ignore audio block errors silently
+        }
+      }
+
+      // ======================================================================
+      // NON-BLOCKING TOAST NOTIFICATION
+      // ======================================================================
+      function showToast(message) {
+        const stack = document.getElementById('toastStack');
+        if (!stack) return;
+        const item = document.createElement('div');
+        item.className = 'toast-msg';
+        item.innerHTML = `
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--rgb-primary); flex-shrink: 0;"></span>
+          <span>${escapeHtml(message)}</span>
+        `;
+        stack.appendChild(item);
+        setTimeout(() => {
+          item.style.opacity = '0';
+          item.style.transform = 'translateY(6px)';
+          setTimeout(() => item.remove(), 220);
+        }, 2800);
+      }
+
+      // ======================================================================
+      // APPLY THEME, WALLPAPER & FOLDER OPEN/CLOSED STATES
+      // ======================================================================
+      function applyVisualSettings() {
+        const s = state.settings;
+        const root = document.documentElement;
+
+        root.style.setProperty('--rgb-primary', s.primaryColor);
+        root.style.setProperty('--rgb-secondary', s.secondaryColor);
+        root.style.setProperty('--rgb-tertiary', s.tertiaryColor);
+        root.style.setProperty('--glow-scale', String((Number(s.glowIntensity) || 0) / 100));
+        root.style.setProperty('--wall-dim', String((Number(s.wallDim) || 78) / 100));
+        root.style.setProperty('--wall-blur', `${Number(s.wallBlur) || 0}px`);
+
+        document.body.classList.toggle('chroma-active', !!s.chromaCycle);
+        document.body.classList.toggle('tactical-grid', !!s.gridEnabled);
+
+        const wallLayer = document.getElementById('wallpaperLayer');
+        const wallStatusTag = document.getElementById('wallpaperStatusTag');
+        if (sessionWallpaperDataUrl) {
+          wallLayer.style.backgroundImage = `url("${sessionWallpaperDataUrl}")`;
+          wallLayer.classList.add('has-wallpaper');
+          if (wallStatusTag) {
+            wallStatusTag.textContent = 'ACTIVE';
+            wallStatusTag.style.color = 'var(--rgb-primary)';
+          }
+        } else {
+          wallLayer.style.backgroundImage = 'none';
+          wallLayer.classList.remove('has-wallpaper');
+          if (wallStatusTag) {
+            wallStatusTag.textContent = 'NONE';
+            wallStatusTag.style.color = 'var(--text-muted)';
+          }
+        }
+
+        const themeCard = document.getElementById('themeFolderCard');
+        const themeToggleBtn = document.getElementById('themeFolderToggleBtn');
+        const themeBadge = document.getElementById('themeFolderStateBadge');
+        const topGearBtn = document.getElementById('topSettingsGearBtn');
+        themeCard.classList.toggle('is-open', !!s.themeFolderOpen);
+        themeToggleBtn.setAttribute('aria-expanded', String(!!s.themeFolderOpen));
+        themeBadge.textContent = s.themeFolderOpen ? 'ON' : 'OFF';
+        themeBadge.classList.toggle('is-on', !!s.themeFolderOpen);
+        if (topGearBtn) {
+          topGearBtn.classList.toggle('is-active', !!s.themeFolderOpen);
+          topGearBtn.setAttribute('aria-expanded', String(!!s.themeFolderOpen));
+        }
+
+        const histCard = document.getElementById('historyFolderCard');
+        const histToggleBtn = document.getElementById('historyFolderToggleBtn');
+        const histBadge = document.getElementById('historyFolderStateBadge');
+        histCard.classList.toggle('is-open', !!s.historyFolderOpen);
+        histToggleBtn.setAttribute('aria-expanded', String(!!s.historyFolderOpen));
+        histBadge.textContent = s.historyFolderOpen ? 'OPEN' : 'CLOSED';
+        histBadge.classList.toggle('is-on', !!s.historyFolderOpen);
+
+        document.getElementById('customAccentPicker').value = s.primaryColor;
+        document.getElementById('customAccentHex').textContent = s.primaryColor.toUpperCase();
+        document.getElementById('chromaCycleToggle').checked = !!s.chromaCycle;
+        document.getElementById('glowRangeInput').value = s.glowIntensity;
+        document.getElementById('glowSliderVal').textContent = `${s.glowIntensity}%`;
+        document.getElementById('glowPctLabel').textContent = `${s.glowIntensity}%`;
+        document.getElementById('wallDimRange').value = s.wallDim;
+        document.getElementById('wallDimVal').textContent = `${s.wallDim}%`;
+        document.getElementById('wallBlurRange').value = s.wallBlur;
+        document.getElementById('wallBlurVal').textContent = `${s.wallBlur}px`;
+        document.getElementById('soundToggle').checked = !!s.soundEnabled;
+        document.getElementById('gridToggle').checked = !!s.gridEnabled;
+        document.getElementById('singleFocusCheckbox').checked = !!s.singleFocus;
+
+        const tintPct = Number(s.subjectTintOpacity ?? 22);
+        const subjTintRange = document.getElementById('subjTintRange');
+        if (subjTintRange) {
+          subjTintRange.value = tintPct;
+          document.getElementById('subjTintSliderVal').textContent = `${tintPct}%`;
+          document.getElementById('subjTintLabel').textContent = `${tintPct}%`;
+        }
+        document.querySelectorAll('#subjectThemePickers input[data-subj-color]').forEach((inp) => {
+          const subjName = inp.dataset.subjColor;
+          inp.value = getSubjectBgColor(subjName);
+        });
+
+        document.querySelectorAll('#rgbPresetSwatches .swatch-btn').forEach((btn) => {
+          const isMatch = s.chromaCycle
+            ? btn.dataset.chroma === 'true'
+            : !btn.dataset.chroma && btn.dataset.p.toLowerCase() === s.primaryColor.toLowerCase();
+          btn.classList.toggle('active', isMatch);
+        });
+      }
+
+      // ======================================================================
+      // MISSION WORKFLOW: CREATE -> REORDER (DRAG / NUDGE) -> ATTACK -> DONE
+      // ======================================================================
+      function createMission(title, subject, targetMins) {
+        const trimmed = title.trim();
+        if (!trimmed) return;
+
+        const newId = `m_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        state.activeMissions.unshift({
+          id: newId,
+          title: trimmed,
+          subject: subject || 'Physics',
+          targetMins: Math.max(0, Number(targetMins) || 0),
+          createdAt: Date.now(),
+          elapsedBeforePause: 0,
+          isAttacking: false,
+          attackStartTime: null,
+        });
+
+        lastReorderedMissionId = newId;
+        saveAppState();
+        renderAll();
+        showToast(`Added #01: "${trimmed}"`);
+      }
+
+      // Reorder activeMissions cleanly whether viewing "All" or a specific subject filter
+      function reorderMissionByIds(draggedId, targetId, insertAfter = false) {
+        if (!draggedId || !targetId || draggedId === targetId) return false;
+        const fromIdx = state.activeMissions.findIndex((m) => m.id === draggedId);
+        const toIdx = state.activeMissions.findIndex((m) => m.id === targetId);
+        if (fromIdx === -1 || toIdx === -1) return false;
+
+        const [moved] = state.activeMissions.splice(fromIdx, 1);
+        let newTargetIdx = state.activeMissions.findIndex((m) => m.id === targetId);
+        if (newTargetIdx === -1) {
+          state.activeMissions.push(moved);
+        } else {
+          if (insertAfter) newTargetIdx += 1;
+          state.activeMissions.splice(newTargetIdx, 0, moved);
+        }
+
+        lastReorderedMissionId = draggedId;
+        saveAppState();
+        playTacticalTone('reorder');
+        renderActiveMissions();
+
+        const visible = getVisibleMissionsList();
+        const newPos = visible.findIndex((m) => m.id === draggedId) + 1;
+        if (newPos > 0) {
+          showToast(`Slot #${String(newPos).padStart(2, '0')} → "${moved.title}"`);
+        }
+        return true;
+      }
+
+      // Shift a mission up (-1) or down (+1) within the currently visible queue
+      function nudgeMissionPosition(missionId, direction) {
+        const visible = getVisibleMissionsList();
+        const visIdx = visible.findIndex((m) => m.id === missionId);
+        if (visIdx === -1) return;
+        const swapVisIdx = visIdx + direction;
+        if (swapVisIdx < 0 || swapVisIdx >= visible.length) return;
+
+        const neighborId = visible[swapVisIdx].id;
+        reorderMissionByIds(missionId, neighborId, direction > 0);
+      }
+
+      function toggleAttackMission(missionId) {
+        const now = Date.now();
+        const target = state.activeMissions.find((m) => m.id === missionId);
+        if (!target) return;
+
+        if (target.isAttacking) {
+          target.elapsedBeforePause = computeMissionElapsedMs(target, now);
+          target.isAttacking = false;
+          target.attackStartTime = null;
+          saveAppState();
+          playTacticalTone('pause');
+          renderAll();
+          showToast(`Paused "${target.title}"`);
+          return;
+        }
+
+        if (state.settings.singleFocus) {
+          state.activeMissions.forEach((m) => {
+            if (m.id !== missionId && m.isAttacking) {
+              m.elapsedBeforePause = computeMissionElapsedMs(m, now);
+              m.isAttacking = false;
+              m.attackStartTime = null;
+            }
+          });
+        }
+
+        target.isAttacking = true;
+        target.attackStartTime = now;
+        saveAppState();
+        playTacticalTone('attack');
+        renderAll();
+        showToast(`ATTACK STARTED: "${target.title}"`);
+      }
+
+      function completeMission(missionId) {
+        const now = Date.now();
+        const idx = state.activeMissions.findIndex((m) => m.id === missionId);
+        if (idx === -1) return;
+
+        const mission = state.activeMissions[idx];
+        const totalDurationMs = computeMissionElapsedMs(mission, now);
+        const dateKey = getLocalDateKey(new Date(now));
+
+        if (!Array.isArray(state.historyByDate[dateKey])) {
+          state.historyByDate[dateKey] = [];
+        }
+
+        state.historyByDate[dateKey].unshift({
+          id: `h_${now}_${Math.random().toString(36).slice(2, 6)}`,
+          title: mission.title,
+          subject: mission.subject,
+          durationMs: totalDurationMs,
+          completedAt: now,
+        });
+
+        state.activeMissions.splice(idx, 1);
+        saveAppState();
+        playTacticalTone('done');
+        renderAll();
+        showToast(`DONE: "${mission.title}" (${formatHoursMins(totalDurationMs)}) saved!`);
+      }
+
+      function deleteActiveMission(missionId) {
+        const idx = state.activeMissions.findIndex((m) => m.id === missionId);
+        if (idx === -1) return;
+        const removed = state.activeMissions[idx];
+        state.activeMissions.splice(idx, 1);
+        saveAppState();
+        renderAll();
+        showToast(`Deleted "${removed.title}"`);
+      }
+
+      function deleteHistoryEntry(dateKey, logId) {
+        const logs = state.historyByDate[dateKey];
+        if (!Array.isArray(logs)) return;
+        const idx = logs.findIndex((item) => item.id === logId);
+        if (idx === -1) return;
+        const [removed] = logs.splice(idx, 1);
+        if (logs.length === 0) {
+          delete state.historyByDate[dateKey];
+        }
+        saveAppState();
+        renderAll();
+        showToast(`Removed "${removed.title}" from history.`);
+      }
+
+      function clearHistoryDay(dateKey) {
+        if (!state.historyByDate[dateKey]) return;
+        delete state.historyByDate[dateKey];
+        saveAppState();
+        renderAll();
+        showToast(`Cleared all logs for ${formatShortDay(dateKey)}.`);
+      }
+
+      function clearAllHistoryLogs() {
+        state.historyByDate = {};
+        state.focusedDayKey = null;
+        saveAppState();
+        renderAll();
+        showToast('All completed history cleared.');
+      }
+
+      function renderSubjectFilterBar() {
+        const bar = document.getElementById('subjectFilterBar');
+        if (!bar) return;
+
+        const subjects = ['All', 'Physics', 'Maths', 'Organic Chem', 'Physical/Inorg', 'Mock / PYQ', 'General'];
+        bar.innerHTML = subjects
+          .map((subj) => {
+            const isActive = state.subjectFilter === subj;
+            const dotColor = subj !== 'All' ? getSubjectBgColor(subj) : '';
+            const countInQueue =
+              subj === 'All'
+                ? state.activeMissions.length
+                : state.activeMissions.filter((m) => m.subject === subj).length;
+            return `
+              <button
+                type="button"
+                class="pill-btn ${isActive ? 'active' : ''}"
+                data-subject-pill="${escapeHtml(subj)}"
+                style="display: inline-flex; align-items: center; gap: 6px;"
+              >
+                ${
+                  subj !== 'All'
+                    ? `<span style="width: 7px; height: 7px; border-radius: 50%; background: ${isActive ? '#050508' : dotColor};"></span>`
+                    : ''
+                }
+                <span>${escapeHtml(subj)}</span>
+                <span class="mono" style="opacity: 0.78; font-size: 0.68rem;">(${countInQueue})</span>
+              </button>
+            `;
+          })
+          .join('');
+      }
+
+      function getVisibleMissionsList() {
+        return state.subjectFilter === 'All'
+          ? state.activeMissions
+          : state.activeMissions.filter((m) => m.subject === state.subjectFilter);
+      }
+
+      function renderActiveMissions() {
+        const container = document.getElementById('activeMissionsContainer');
+        const badge = document.getElementById('activeMissionBadge');
+        if (!container || !badge) return;
+
+        const list = getVisibleMissionsList();
+
+        badge.textContent =
+          state.subjectFilter === 'All'
+            ? `${state.activeMissions.length} Active`
+            : `${list.length} in ${state.subjectFilter}`;
+
+        if (list.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state-box">
+              <div style="font-weight: 800; color: var(--text-main); margin-bottom: 4px;">
+                ${state.subjectFilter === 'All' ? 'No Active Missions in Queue' : `No Active Missions under "${escapeHtml(state.subjectFilter)}"`}
+              </div>
+              <div>
+                Type your JEE task above, drag cards anytime to set priority <strong style="color: var(--rgb-primary);">#01</strong>, and click <strong style="color: var(--rgb-primary);">ATTACK</strong> to start the live clock.
+              </div>
+            </div>
+          `;
+          return;
+        }
+
+        const now = Date.now();
+        const tintPct = Number(state.settings.subjectTintOpacity ?? 22);
+        const popTargetId = lastReorderedMissionId;
+        lastReorderedMissionId = null;
+
+        container.innerHTML = list
+          .map((m, idx) => {
+            const elapsedMs = computeMissionElapsedMs(m, now);
+            const targetMs = (Number(m.targetMins) || 0) * 60000;
+            const pct = targetMs > 0 ? Math.min(100, Math.round((elapsedMs / targetMs) * 100)) : 0;
+            const subjColor = getSubjectBgColor(m.subject);
+            const seqLabel = `#${String(idx + 1).padStart(2, '0')}`;
+            const keyHint = idx < 9 ? `KEY ${idx + 1}` : 'MISSION';
+            const isFirst = idx === 0;
+            const isLast = idx === list.length - 1;
+            const shouldPop = popTargetId === m.id;
+
+            return `
+              <article
+                class="mission-item ${m.isAttacking ? 'is-attacking' : ''} ${shouldPop ? 'just-reordered' : ''}"
+                data-mission-id="${escapeHtml(m.id)}"
+                style="--subj-bg: ${subjColor}; --subj-tint: ${tintPct}%;"
+              >
+                <div class="reorder-dock">
+                  <div
+                    class="drag-grip-handle"
+                    data-drag-handle="true"
+                    title="Drag up or down to reorder mission priority"
+                    aria-label="Drag to reorder mission"
+                  >
+                    <svg width="14" height="18" viewBox="0 0 14 18" fill="currentColor">
+                      <circle cx="4.5" cy="3.5" r="1.45" />
+                      <circle cx="9.5" cy="3.5" r="1.45" />
+                      <circle cx="4.5" cy="9" r="1.45" />
+                      <circle cx="9.5" cy="9" r="1.45" />
+                      <circle cx="4.5" cy="14.5" r="1.45" />
+                      <circle cx="9.5" cy="14.5" r="1.45" />
+                    </svg>
+                  </div>
+
+                  <div class="nudge-stack">
+                    <button
+                      type="button"
+                      class="btn-nudge"
+                      data-action="move-up"
+                      data-id="${escapeHtml(m.id)}"
+                      ${isFirst ? 'disabled' : ''}
+                      title="Move Up"
+                      aria-label="Move mission up"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-nudge"
+                      data-action="move-down"
+                      data-id="${escapeHtml(m.id)}"
+                      ${isLast ? 'disabled' : ''}
+                      title="Move Down"
+                      aria-label="Move mission down"
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  class="mission-seq-badge mono ${isFirst ? 'is-priority-one' : ''}"
+                  title="Auto-numbered Mission ${seqLabel}${idx < 9 ? ` — Press ${idx + 1} on keyboard to Attack/Pause` : ''}"
+                >
+                  <span class="seq-num">${seqLabel}</span>
+                  <span class="seq-key">${keyHint}</span>
+                </div>
+
+                <div class="mission-meta-col">
+                  <div class="mission-tags-row">
+                    ${
+                      isFirst
+                        ? `<span class="priority-one-chip mono">TOP #01</span>`
+                        : ''
+                    }
+                    ${
+                      m.isAttacking
+                        ? `<span class="status-chip attacking"><span class="pulse-dot"></span>ATTACKING</span>`
+                        : `<span class="status-chip ready">STANDBY</span>`
+                    }
+                    <span class="tag-chip">${escapeHtml(m.subject)}</span>
+                    ${
+                      targetMs > 0
+                        ? `<span class="target-chip mono">Target: ${m.targetMins}m (${pct}%)</span>`
+                        : ''
+                    }
+                  </div>
+
+                  <h3 class="mission-title-text">${escapeHtml(m.title)}</h3>
+
+                  ${
+                    targetMs > 0
+                      ? `<div class="target-bar-wrap"><div class="target-bar-fill" style="width: ${pct}%;"></div></div>`
+                      : ''
+                  }
+                </div>
+
+                <div class="mission-controls-col">
+                  <div class="clock-box">
+                    <div class="lbl">Elapsed Time</div>
+                    <div class="val mono mission-clock-val">${formatHHMMSS(elapsedMs)}</div>
+                  </div>
+
+                  ${
+                    m.isAttacking
+                      ? `<button type="button" class="btn-action btn-pause" data-action="attack" data-id="${escapeHtml(m.id)}">
+                           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+                           <span>PAUSE</span>
+                         </button>`
+                      : `<button type="button" class="btn-rgb" style="padding: 9px 14px; font-size: 0.78rem; text-transform: uppercase;" data-action="attack" data-id="${escapeHtml(m.id)}">
+                           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+                           <span>ATTACK</span>
+                         </button>`
+                  }
+
+                  <button type="button" class="btn-action btn-done" data-action="done" data-id="${escapeHtml(m.id)}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span>DONE</span>
+                  </button>
+
+                  <button type="button" class="btn-icon-del" data-action="delete" data-id="${escapeHtml(m.id)}" title="Remove mission" aria-label="Remove mission">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </article>
+            `;
+          })
+          .join('');
+      }
+
+      // ======================================================================
+      // UNIFIED POINTER DRAG & DROP ENGINE (SMOOTH MOUSE + TOUCH + AUTO-SCROLL)
+      // ======================================================================
+      function initMissionPointerDrag() {
+        const container = document.getElementById('activeMissionsContainer');
+        if (!container) return;
+
+        let dragState = null;
+
+        function clearDropIndicators() {
+          container.querySelectorAll('.mission-item').forEach((el) => {
+            el.classList.remove('drop-above', 'drop-below');
+          });
+        }
+
+        function cleanupDrag() {
+          if (!dragState) return;
+          if (dragState.ghostEl) dragState.ghostEl.remove();
+          if (dragState.sourceCard) dragState.sourceCard.classList.remove('is-dragging');
+          clearDropIndicators();
+          document.body.style.userSelect = '';
+          document.body.style.cursor = '';
+          dragState = null;
+        }
+
+        container.addEventListener('pointerdown', (e) => {
+          const handle = e.target.closest('[data-drag-handle]');
+          if (!handle || e.button > 0) return;
+
+          const card = handle.closest('.mission-item');
+          if (!card) return;
+
+          const allCards = Array.from(container.querySelectorAll('.mission-item'));
+          if (allCards.length < 2) return;
+
+          e.preventDefault();
+          const rect = card.getBoundingClientRect();
+
+          // Create floating ghost clone for buttery-smooth visual tracking
+          const ghost = card.cloneNode(true);
+          ghost.classList.add('drag-ghost-clone');
+          ghost.style.width = `${rect.width}px`;
+          ghost.style.left = `${rect.left}px`;
+          ghost.style.top = `${rect.top}px`;
+          document.body.appendChild(ghost);
+
+          card.classList.add('is-dragging');
+          document.body.style.userSelect = 'none';
+          document.body.style.cursor = 'grabbing';
+
+          dragState = {
+            draggedId: card.dataset.missionId,
+            sourceCard: card,
+            ghostEl: ghost,
+            offsetY: e.clientY - rect.top,
+            offsetX: e.clientX - rect.left,
+            targetId: null,
+            insertAfter: false,
+          };
+        });
+
+        window.addEventListener('pointermove', (e) => {
+          if (!dragState) return;
+
+          // Move floating ghost smoothly with pointer
+          const nextTop = e.clientY - dragState.offsetY;
+          dragState.ghostEl.style.top = `${nextTop}px`;
+
+          // Auto-scroll viewport gently near top/bottom edges
+          const edgeZone = 75;
+          if (e.clientY < edgeZone) {
+            window.scrollBy(0, -10);
+          } else if (e.clientY > window.innerHeight - edgeZone) {
+            window.scrollBy(0, 10);
+          }
+
+          clearDropIndicators();
+          dragState.targetId = null;
+
+          const candidateCards = Array.from(container.querySelectorAll('.mission-item')).filter(
+            (el) => el.dataset.missionId !== dragState.draggedId
+          );
+
+          if (candidateCards.length === 0) return;
+
+          // Find closest card relative to pointer Y
+          let chosenCard = null;
+          let insertAfter = false;
+
+          for (let i = 0; i < candidateCards.length; i++) {
+            const c = candidateCards[i];
+            const r = c.getBoundingClientRect();
+            const midY = r.top + r.height / 2;
+            if (e.clientY < midY) {
+              chosenCard = c;
+              insertAfter = false;
+              break;
+            }
+            if (i === candidateCards.length - 1) {
+              chosenCard = c;
+              insertAfter = true;
+            }
+          }
+
+          if (chosenCard) {
+            dragState.targetId = chosenCard.dataset.missionId;
+            dragState.insertAfter = insertAfter;
+            chosenCard.classList.add(insertAfter ? 'drop-below' : 'drop-above');
+          }
+        });
+
+        window.addEventListener('pointerup', () => {
+          if (!dragState) return;
+          const { draggedId, targetId, insertAfter } = dragState;
+          cleanupDrag();
+          if (draggedId && targetId && draggedId !== targetId) {
+            reorderMissionByIds(draggedId, targetId, insertAfter);
+          }
+        });
+
+        window.addEventListener('pointercancel', cleanupDrag);
+      }
+
+      // ======================================================================
+      // HISTORY FOLDER: STRICTLY 7-DAY WEEKWISE GRAPH & DAILY BREAKDOWN
+      // ======================================================================
+      function buildSevenDaySlice(weekOffset = 0) {
+        const now = new Date();
+        const anchor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        anchor.setDate(anchor.getDate() + weekOffset * 7);
+
+        const slice = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+          d.setDate(d.getDate() - i);
+          const key = getLocalDateKey(d);
+          const logs = Array.isArray(state.historyByDate[key]) ? state.historyByDate[key] : [];
+          const totalMs = logs.reduce((acc, item) => acc + (Number(item.durationMs) || 0), 0);
+          slice.push({
+            dateKey: key,
+            shortDate: formatShortDay(key),
+            fullDate: formatVerboseDay(key),
+            count: logs.length,
+            totalMs,
+            hours: Math.round((totalMs / 3600000) * 100) / 100,
+            logs,
+          });
+        }
+        return slice;
+      }
+
+      function computeSmoothCurvePath(pts) {
+        if (!pts.length) return '';
+        if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y}`;
+        let path = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+        for (let i = 0; i < pts.length - 1; i++) {
+          const p0 = pts[i === 0 ? i : i - 1];
+          const p1 = pts[i];
+          const p2 = pts[i + 1];
+          const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
+
+          const cp1x = p1.x + (p2.x - p0.x) / 6;
+          const cp1y = p1.y + (p2.y - p0.y) / 6;
+          const cp2x = p2.x - (p3.x - p1.x) / 6;
+          const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+          path += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+        }
+        return path;
+      }
+
+      function renderConsistencyGraph() {
+        const svg = document.getElementById('consistencySvg');
+        const rangeText = document.getElementById('weekRangeText');
+        const nextBtn = document.getElementById('nextWeekBtn');
+        const caption = document.getElementById('graphCaptionText');
+        const missionsBtn = document.getElementById('metricMissionsBtn');
+        const hoursBtn = document.getElementById('metricHoursBtn');
+        if (!svg) return;
+
+        const days = buildSevenDaySlice(state.weekOffset);
+        rangeText.textContent = `${days[0].shortDate} — ${days[6].shortDate}`;
+        nextBtn.disabled = state.weekOffset >= 0;
+        nextBtn.style.opacity = state.weekOffset >= 0 ? '0.4' : '1';
+
+        const isHours = state.graphMetric === 'hours';
+        missionsBtn.classList.toggle('active', !isHours);
+        hoursBtn.classList.toggle('active', isHours);
+        caption.textContent = isHours
+          ? 'Daily focus hours trajectory across strictly 7 days (use ← Prev Week for older consistency)'
+          : 'Daily completed missions trajectory across strictly 7 days (use ← Prev Week for older consistency)';
+
+        const totalMissions = days.reduce((s, d) => s + d.count, 0);
+        const totalMs = days.reduce((s, d) => s + d.totalMs, 0);
+        const activeDays = days.filter((d) => d.count > 0 || d.totalMs > 0).length;
+
+        document.getElementById('kpiWeekMissions').textContent = String(totalMissions);
+        document.getElementById('kpiWeekTime').textContent = formatHoursMins(totalMs);
+        document.getElementById('kpiWeekDays').textContent = `${activeDays} / 7`;
+
+        const W = 820;
+        const H = 265;
+        const padL = 50;
+        const padR = 28;
+        const padT = 22;
+        const padB = 44;
+        const plotW = W - padL - padR;
+        const plotH = H - padT - padB;
+
+        const vals = days.map((d) => (isHours ? d.hours : d.count));
+        const maxVal = Math.max(...vals, 0);
+        const yTop = maxVal === 0 ? 2 : isHours ? Math.ceil(maxVal * 1.25 * 10) / 10 : Math.ceil(maxVal + 1);
+        const gridSteps = 4;
+
+        const primary = state.settings.primaryColor;
+        const secondary = state.settings.secondaryColor;
+        const glowScale = (Number(state.settings.glowIntensity) || 0) / 100;
+
+        const pts = days.map((d, i) => {
+          const x = padL + (i / 6) * plotW;
+          const ratio = yTop > 0 ? Math.min(1, vals[i] / yTop) : 0;
+          const y = padT + plotH - ratio * plotH;
+          return { x, y, day: d, val: vals[i] };
+        });
+
+        const curveD = computeSmoothCurvePath(pts);
+        const areaD = pts.length
+          ? `${curveD} L ${pts[6].x.toFixed(1)} ${(padT + plotH).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(padT + plotH).toFixed(1)} Z`
+          : '';
+
+        let hGrid = '';
+        for (let g = 0; g <= gridSteps; g++) {
+          const f = g / gridSteps;
+          const y = padT + plotH - f * plotH;
+          const labelVal = Math.round(yTop * f * 10) / 10;
+          hGrid += `
+            <line x1="${padL}" y1="${y.toFixed(1)}" x2="${W - padR}" y2="${y.toFixed(1)}"
+                  stroke="rgba(148, 163, 184, 0.1)" stroke-width="1" />
+            <text x="${padL - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end"
+                  fill="#64748b" font-size="11" font-family="ui-monospace, monospace">${labelVal}</text>
+          `;
+        }
+
+        let vGrid = '';
+        pts.forEach((pt) => {
+          vGrid += `
+            <line x1="${pt.x.toFixed(1)}" y1="${padT}" x2="${pt.x.toFixed(1)}" y2="${padT + plotH}"
+                  stroke="rgba(148, 163, 184, 0.08)" stroke-width="1" />
+            <text x="${pt.x.toFixed(1)}" y="${H - 14}" text-anchor="middle"
+                  fill="#94a3b8" font-size="11" font-family="ui-monospace, monospace">${escapeHtml(pt.day.shortDate)}</text>
+          `;
+        });
+
+        let nodes = '';
+        pts.forEach((pt, idx) => {
+          const isFocused = state.focusedDayKey === pt.day.dateKey;
+          nodes += `
+            <g class="graph-pt" data-idx="${idx}" style="cursor: pointer;">
+              <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isFocused ? 9.5 : 6.8}"
+                      fill="none" stroke="${primary}" stroke-width="${isFocused ? 2.5 : 1.8}" opacity="0.65" />
+              <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="${isFocused ? 5.5 : 4.2}"
+                      fill="#22ff88" stroke="#050508" stroke-width="1.8" />
+              <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="18" fill="transparent" />
+            </g>
+          `;
+        });
+
+        svg.innerHTML = `
+          <defs>
+            <linearGradient id="curveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="${primary}" />
+              <stop offset="70%" stop-color="${primary}" />
+              <stop offset="100%" stop-color="${secondary}" />
+            </linearGradient>
+            <linearGradient id="areaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="${primary}" stop-opacity="${(0.32 * glowScale).toFixed(2)}" />
+              <stop offset="100%" stop-color="${primary}" stop-opacity="0.0" />
+            </linearGradient>
+            <filter id="curveGlow" x="-15%" y="-15%" width="130%" height="130%">
+              <feDropShadow dx="0" dy="0" stdDeviation="${(4.5 * glowScale).toFixed(1)}" flood-color="${primary}" flood-opacity="${(0.75 * glowScale).toFixed(2)}" />
+            </filter>
+          </defs>
+          ${hGrid}
+          ${vGrid}
+          <line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + plotH}" stroke="rgba(148,163,184,0.24)" stroke-width="1.2" />
+          <line x1="${padL}" y1="${padT + plotH}" x2="${W - padR}" y2="${padT + plotH}" stroke="rgba(148,163,184,0.24)" stroke-width="1.2" />
+          ${areaD ? `<path d="${areaD}" fill="url(#areaGrad)" />` : ''}
+          ${curveD ? `<path d="${curveD}" fill="none" stroke="url(#curveGrad)" stroke-width="3" stroke-linecap="round" filter="url(#curveGlow)" />` : ''}
+          ${nodes}
+        `;
+
+        const tooltip = document.getElementById('graphTooltip');
+        svg.querySelectorAll('.graph-pt').forEach((gEl) => {
+          const idx = Number(gEl.dataset.idx);
+          const pt = pts[idx];
+          if (!pt) return;
+
+          gEl.addEventListener('mousemove', (e) => {
+            tooltip.style.display = 'block';
+            tooltip.innerHTML = `
+              <div style="font-weight: 800; margin-bottom: 4px;">${escapeHtml(pt.day.fullDate)}</div>
+              <div style="color: var(--text-sub);">Missions Done: <strong class="mono" style="color: ${primary};">${pt.day.count}</strong></div>
+              <div style="color: var(--text-sub);">Total Focus: <strong class="mono" style="color: #6ee7b7;">${formatHoursMins(pt.day.totalMs)}</strong></div>
+            `;
+            tooltip.style.left = `${Math.min(window.innerWidth - 220, e.clientX + 14)}px`;
+            tooltip.style.top = `${Math.max(12, e.clientY - 14)}px`;
+          });
+
+          gEl.addEventListener('mouseleave', () => {
+            tooltip.style.display = 'none';
+          });
+
+          gEl.addEventListener('click', () => {
+            state.focusedDayKey = state.focusedDayKey === pt.day.dateKey ? null : pt.day.dateKey;
+            saveAppState();
+            renderConsistencyGraph();
+            renderDayBreakdownList();
+          });
+        });
+      }
+
+      function renderDayBreakdownList() {
+        const pillsWrap = document.getElementById('dayFilterPills');
+        const listWrap = document.getElementById('dayBreakdownList');
+        if (!pillsWrap || !listWrap) return;
+
+        const days = buildSevenDaySlice(state.weekOffset);
+
+        pillsWrap.innerHTML = `
+          <button type="button" class="pill-btn ${!state.focusedDayKey ? 'active' : ''}" data-day-key="ALL">
+            All 7 Days
+          </button>
+          ${days
+            .slice()
+            .reverse()
+            .map((d) => {
+              const isAct = state.focusedDayKey === d.dateKey;
+              return `
+                <button type="button" class="pill-btn mono ${isAct ? 'active' : ''}" data-day-key="${d.dateKey}">
+                  ${escapeHtml(d.shortDate)} (${d.count})
+                </button>
+              `;
+            })
+            .join('')}
+        `;
+
+        const ordered = days.slice().reverse();
+        const visible = state.focusedDayKey
+          ? ordered.filter((d) => d.dateKey === state.focusedDayKey)
+          : ordered;
+
+        listWrap.innerHTML = visible
+          .map((day) => {
+            const hasLogs = day.logs.length > 0;
+            return `
+              <div class="day-log-card">
+                <div class="day-log-head">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: ${hasLogs ? 'var(--rgb-primary)' : '#334155'};"></span>
+                    <strong style="font-size: 0.88rem;">${escapeHtml(day.fullDate)}</strong>
+                  </div>
+                  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.74rem;" class="mono">
+                    <span style="padding: 3px 9px; border-radius: 7px; background: rgba(15,23,42,0.95); border: 1px solid var(--border-dim); color: var(--text-sub);">
+                      ${day.count} ${day.count === 1 ? 'mission' : 'missions'}
+                    </span>
+                    <span style="padding: 3px 9px; border-radius: 7px; background: rgba(15,23,42,0.95); border: 1px solid var(--border-dim); color: var(--rgb-primary); font-weight: 800;">
+                      Total: ${formatHoursMins(day.totalMs)}
+                    </span>
+                    ${
+                      hasLogs
+                        ? `<button type="button" class="btn-mini-danger" data-clear-day="${escapeHtml(day.dateKey)}" data-confirm-step="0" title="Delete all logs for this day">
+                             Clear Day
+                           </button>`
+                        : ''
+                    }
+                  </div>
+                </div>
+
+                ${
+                  hasLogs
+                    ? day.logs
+                        .map(
+                          (log) => {
+                            const subjColor = getSubjectBgColor(log.subject || 'General');
+                            return `
+                        <div class="day-mission-row" style="--subj-bg: ${subjColor}; border-left: 3px solid ${subjColor};">
+                          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0;">
+                            <span style="color: #6ee7b7; font-weight: 800;">✓</span>
+                            <span style="font-size: 0.85rem; font-weight: 700; word-break: break-word;">${escapeHtml(log.title)}</span>
+                            <span class="tag-chip">${escapeHtml(log.subject || 'Mission')}</span>
+                          </div>
+                          <div style="display: flex; align-items: center; gap: 10px; font-size: 0.75rem;" class="mono">
+                            <span style="color: var(--text-muted);">Done ${formatClockTime(log.completedAt)}</span>
+                            <span style="padding: 3px 9px; border-radius: 7px; background: rgba(5,7,13,0.95); border: 1px solid color-mix(in srgb, var(--rgb-primary) 35%, transparent); color: var(--rgb-primary); font-weight: 800;">
+                              ${formatHoursMins(log.durationMs)}
+                            </span>
+                            <button
+                              type="button"
+                              class="btn-hist-del"
+                              data-del-hist-date="${escapeHtml(day.dateKey)}"
+                              data-del-hist-id="${escapeHtml(log.id)}"
+                              title="Delete this completed mission from history"
+                              aria-label="Delete mission from history"
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      `;
+                          }
+                        )
+                        .join('')
+                    : `<div style="font-size: 0.76rem; color: var(--text-muted);">No completed missions logged on ${escapeHtml(day.shortDate)}.</div>`
+                }
+              </div>
+            `;
+          })
+          .join('');
+      }
+
+      // ======================================================================
+      // LIVE HUD TICKER (250ms PRECISION CLOCK & STATS SYNC)
+      // ======================================================================
+      function updateHudAndTimers(nowMs = Date.now()) {
+        const dt = new Date(nowMs);
+        const hudClock = document.getElementById('hudLiveClock');
+        const hudDateSub = document.getElementById('hudDateSub');
+        if (hudClock) hudClock.textContent = dt.toLocaleTimeString([], { hour12: false });
+        if (hudDateSub) {
+          hudDateSub.textContent = dt.toLocaleDateString('en-GB', {
+            weekday: 'long',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          });
+        }
+
+        const todayKey = getLocalDateKey(dt);
+        const todayLogs = Array.isArray(state.historyByDate[todayKey]) ? state.historyByDate[todayKey] : [];
+        const completedTodayMs = todayLogs.reduce((s, item) => s + (Number(item.durationMs) || 0), 0);
+        const activeLiveMs = state.activeMissions.reduce((s, m) => s + computeMissionElapsedMs(m, nowMs), 0);
+
+        document.getElementById('hudDoneToday').textContent = String(todayLogs.length);
+        document.getElementById('hudFocusToday').textContent = formatHoursMins(completedTodayMs + activeLiveMs);
+
+        const totalAllTime = Object.values(state.historyByDate).reduce(
+          (sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0),
+          0
+        );
+        document.getElementById('historyTotalBadge').textContent = `${totalAllTime} Completed`;
+
+        state.activeMissions.forEach((m) => {
+          const card = document.querySelector(`article[data-mission-id="${m.id}"]`);
+          if (!card) return;
+          const clockEl = card.querySelector('.mission-clock-val');
+          if (clockEl) clockEl.textContent = formatHHMMSS(computeMissionElapsedMs(m, nowMs));
+        });
+
+        const attacking = state.activeMissions.find((m) => m.isAttacking);
+        const banner = document.getElementById('liveAttackBanner');
+        if (attacking) {
+          banner.classList.remove('hidden');
+          document.getElementById('bannerMissionTitle').textContent = attacking.title;
+          document.getElementById('bannerMissionClock').textContent = formatHHMMSS(
+            computeMissionElapsedMs(attacking, nowMs)
+          );
+        } else {
+          banner.classList.add('hidden');
+        }
+      }
+
+      // ======================================================================
+      // SAMPLE DATA, JSON EXPORT & WIPE UTILITIES
+      // ======================================================================
+      function loadSampleConsistencyData() {
+        const now = Date.now();
+        const sampleRows = [
+          { offset: -6, title: 'Electrostatics Gauss Law 40 PYQs', subject: 'Physics', mins: 75 },
+          { offset: -5, title: 'Definite Integration Advanced Sheet', subject: 'Maths', mins: 90 },
+          { offset: -5, title: 'Aldehydes & Ketones Named Reactions', subject: 'Organic Chem', mins: 55 },
+          { offset: -4, title: 'Full Syllabus JEE Main Mock #14', subject: 'Mock / PYQ', mins: 180 },
+          { offset: -2, title: 'Rotational Motion Moment of Inertia Drills', subject: 'Physics', mins: 82 },
+          { offset: -1, title: 'Vectors & 3D Geometry Revision', subject: 'Maths', mins: 68 },
+          { offset: -1, title: 'Chemical Kinetics Rate Law Problems', subject: 'Physical/Inorg', mins: 50 },
+          { offset: 0, title: 'Current Electricity Circuit Analysis', subject: 'Physics', mins: 64 },
+        ];
+
+        const historyByDate = {};
+        sampleRows.forEach((row, idx) => {
+          const d = new Date();
+          d.setDate(d.getDate() + row.offset);
+          const key = getLocalDateKey(d);
+          if (!historyByDate[key]) historyByDate[key] = [];
+          historyByDate[key].push({
+            id: `sample_${idx}_${now}`,
+            title: row.title,
+            subject: row.subject,
+            durationMs: row.mins * 60000,
+            completedAt: now - Math.abs(row.offset) * 3600000 * 3,
+          });
+        });
+
+        state.historyByDate = historyByDate;
+        if (state.activeMissions.length === 0) {
+          state.activeMissions = [
+            {
+              id: `act_sample_1_${now}`,
+              title: 'Coordinate Geometry Conic Sections PYQs',
+              subject: 'Maths',
+              targetMins: 60,
+              createdAt: now,
+              elapsedBeforePause: 22 * 60000,
+              isAttacking: false,
+              attackStartTime: null,
+            },
+            {
+              id: `act_sample_2_${now}`,
+              title: 'GOC Isomerism & Stereochemistry Notes',
+              subject: 'Organic Chem',
+              targetMins: 45,
+              createdAt: now,
+              elapsedBeforePause: 0,
+              isAttacking: false,
+              attackStartTime: null,
+            },
+          ];
+        }
+
+        state.weekOffset = 0;
+        state.focusedDayKey = null;
+        saveAppState();
+        renderAll();
+        showToast('Loaded sample 7-day JEE consistency data!');
+      }
+
+      function exportBackupJson() {
+        const payload = JSON.stringify(state, null, 2);
+        const blob = new Blob([payload], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `mission-jee-backup-${getLocalDateKey()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast('Downloaded offline JSON backup.');
+      }
+
+      function wipeAllLocalData() {
+        state = buildInitialState();
+        persistWallpaperDataUrl('');
+        try {
+          localStorage.removeItem(STATE_KEY);
+          localStorage.removeItem(WALLPAPER_KEY);
+        } catch (err) {
+          // Ignore storage removal issues
+        }
+        saveAppState();
+        applyVisualSettings();
+        renderAll();
+        showToast('Total Reset complete: all missions, history, wallpaper & theme restored to defaults.');
+      }
+
+      function handleTwoStepConfirm(btnEl, defaultLabel, confirmLabel, onConfirmed) {
+        if (!btnEl) return;
+        const step = btnEl.dataset.confirmStep || '0';
+        if (step === '0') {
+          btnEl.dataset.confirmStep = '1';
+          btnEl.textContent = confirmLabel;
+          btnEl.classList.add('is-armed');
+          if (btnEl._armTimer) clearTimeout(btnEl._armTimer);
+          btnEl._armTimer = setTimeout(() => {
+            btnEl.dataset.confirmStep = '0';
+            btnEl.textContent = defaultLabel;
+            btnEl.classList.remove('is-armed');
+          }, 3500);
+        } else {
+          if (btnEl._armTimer) clearTimeout(btnEl._armTimer);
+          btnEl.dataset.confirmStep = '0';
+          btnEl.textContent = defaultLabel;
+          btnEl.classList.remove('is-armed');
+          onConfirmed();
+        }
+      }
+
+      function renderAll() {
+        renderSubjectFilterBar();
+        renderActiveMissions();
+        renderConsistencyGraph();
+        renderDayBreakdownList();
+        updateHudAndTimers(Date.now());
+      }
+
+      // ======================================================================
+      // BIND INTERACTIVE EVENTS
+      // ======================================================================
+      function bindEvents() {
+        document.getElementById('missionCreateForm').addEventListener('submit', (e) => {
+          e.preventDefault();
+          const titleInp = document.getElementById('missionTitleInput');
+          const subjSel = document.getElementById('missionSubjectSelect');
+          const targetSel = document.getElementById('missionTargetSelect');
+          if (!titleInp.value.trim()) return;
+          createMission(titleInp.value, subjSel.value, targetSel.value);
+          titleInp.value = '';
+          titleInp.focus();
+        });
+
+        document.getElementById('subjectFilterBar').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-subject-pill]');
+          if (!btn) return;
+          state.subjectFilter = btn.dataset.subjectPill;
+          saveAppState();
+          renderSubjectFilterBar();
+          renderActiveMissions();
+        });
+
+        document.getElementById('singleFocusCheckbox').addEventListener('change', (e) => {
+          state.settings.singleFocus = e.target.checked;
+          saveAppState();
+        });
+
+        // Mission Card Actions (ATTACK / PAUSE / DONE / DELETE / MOVE-UP / MOVE-DOWN)
+        document.getElementById('activeMissionsContainer').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const act = btn.dataset.action;
+          const id = btn.dataset.id;
+          if (act === 'attack') toggleAttackMission(id);
+          else if (act === 'done') completeMission(id);
+          else if (act === 'delete') deleteActiveMission(id);
+          else if (act === 'move-up') nudgeMissionPosition(id, -1);
+          else if (act === 'move-down') nudgeMissionPosition(id, 1);
+        });
+
+        document.getElementById('themeFolderToggleBtn').addEventListener('click', () => {
+          state.settings.themeFolderOpen = !state.settings.themeFolderOpen;
+          saveAppState();
+          applyVisualSettings();
+        });
+
+        document.getElementById('topSettingsGearBtn').addEventListener('click', () => {
+          state.settings.themeFolderOpen = !state.settings.themeFolderOpen;
+          saveAppState();
+          applyVisualSettings();
+          if (state.settings.themeFolderOpen) {
+            const themeCard = document.getElementById('themeFolderCard');
+            if (themeCard) {
+              themeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+          }
+        });
+
+        document.getElementById('historyFolderToggleBtn').addEventListener('click', () => {
+          state.settings.historyFolderOpen = !state.settings.historyFolderOpen;
+          saveAppState();
+          applyVisualSettings();
+        });
+
+        document.querySelectorAll('#rgbPresetSwatches .swatch-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            state.settings.primaryColor = btn.dataset.p;
+            state.settings.secondaryColor = btn.dataset.s;
+            state.settings.tertiaryColor = btn.dataset.t;
+            state.settings.chromaCycle = btn.dataset.chroma === 'true';
+            saveAppState();
+            applyVisualSettings();
+            renderConsistencyGraph();
+            showToast(`Theme set to ${btn.dataset.name}`);
+          });
+        });
+
+        document.getElementById('customAccentPicker').addEventListener('input', (e) => {
+          state.settings.primaryColor = e.target.value;
+          state.settings.chromaCycle = false;
+          saveAppState();
+          applyVisualSettings();
+          renderConsistencyGraph();
+        });
+
+        document.querySelectorAll('#subjectThemePickers input[data-subj-color]').forEach((inp) => {
+          inp.addEventListener('input', (e) => {
+            const subj = e.target.dataset.subjColor;
+            if (!state.settings.subjectColors) {
+              state.settings.subjectColors = { ...DEFAULT_SUBJECT_COLORS };
+            }
+            state.settings.subjectColors[subj] = e.target.value;
+            saveAppState();
+            renderSubjectFilterBar();
+            renderActiveMissions();
+            renderDayBreakdownList();
+          });
+        });
+
+        document.getElementById('subjTintRange').addEventListener('input', (e) => {
+          state.settings.subjectTintOpacity = Number(e.target.value);
+          saveAppState();
+          applyVisualSettings();
+          renderActiveMissions();
+        });
+
+        document.getElementById('resetSubjectThemesBtn').addEventListener('click', () => {
+          state.settings.subjectColors = { ...DEFAULT_SUBJECT_COLORS };
+          state.settings.subjectTintOpacity = 22;
+          saveAppState();
+          applyVisualSettings();
+          renderSubjectFilterBar();
+          renderActiveMissions();
+          renderDayBreakdownList();
+          showToast('Subject card background themes reset to defaults.');
+        });
+
+        document.getElementById('chromaCycleToggle').addEventListener('change', (e) => {
+          state.settings.chromaCycle = e.target.checked;
+          saveAppState();
+          applyVisualSettings();
+        });
+
+        document.getElementById('glowRangeInput').addEventListener('input', (e) => {
+          state.settings.glowIntensity = Number(e.target.value);
+          saveAppState();
+          applyVisualSettings();
+          renderConsistencyGraph();
+        });
+
+        document.getElementById('wallpaperFileInput').addEventListener('change', async (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          try {
+            const dataUrl = await optimizeImageFileToDataUrl(file);
+            const savedToDisk = persistWallpaperDataUrl(dataUrl);
+            applyVisualSettings();
+            showToast(
+              savedToDisk
+                ? 'Custom PC wallpaper applied & saved offline!'
+                : 'Wallpaper applied for this session (large image).'
+            );
+          } catch (err) {
+            showToast('Could not load selected image file.');
+          }
+          e.target.value = '';
+        });
+
+        document.getElementById('wallDimRange').addEventListener('input', (e) => {
+          state.settings.wallDim = Number(e.target.value);
+          saveAppState();
+          applyVisualSettings();
+        });
+
+        document.getElementById('wallBlurRange').addEventListener('input', (e) => {
+          state.settings.wallBlur = Number(e.target.value);
+          saveAppState();
+          applyVisualSettings();
+        });
+
+        document.getElementById('removeWallpaperBtn').addEventListener('click', () => {
+          persistWallpaperDataUrl('');
+          applyVisualSettings();
+          showToast('Custom wallpaper removed.');
+        });
+
+        document.getElementById('soundToggle').addEventListener('change', (e) => {
+          state.settings.soundEnabled = e.target.checked;
+          saveAppState();
+          if (e.target.checked) playTacticalTone('attack');
+        });
+
+        document.getElementById('gridToggle').addEventListener('change', (e) => {
+          state.settings.gridEnabled = e.target.checked;
+          saveAppState();
+          applyVisualSettings();
+        });
+
+        document.getElementById('exportJsonBtn').addEventListener('click', exportBackupJson);
+        document.getElementById('loadSampleBtn').addEventListener('click', loadSampleConsistencyData);
+        document.getElementById('resetAllBtn').addEventListener('click', (e) => {
+          handleTwoStepConfirm(
+            e.currentTarget,
+            '✕ Total Reset (Wipe All Data)',
+            '⚠ Confirm Total Reset?',
+            wipeAllLocalData
+          );
+        });
+
+        document.getElementById('clearAllHistoryBtn').addEventListener('click', (e) => {
+          handleTwoStepConfirm(
+            e.currentTarget,
+            '✕ Clear History',
+            '⚠ Confirm Wipe?',
+            clearAllHistoryLogs
+          );
+        });
+
+        document.getElementById('dayBreakdownList').addEventListener('click', (e) => {
+          const delItemBtn = e.target.closest('button[data-del-hist-id]');
+          if (delItemBtn) {
+            deleteHistoryEntry(delItemBtn.dataset.delHistDate, delItemBtn.dataset.delHistId);
+            return;
+          }
+
+          const clearDayBtn = e.target.closest('button[data-clear-day]');
+          if (clearDayBtn) {
+            const dateKey = clearDayBtn.dataset.clearDay;
+            handleTwoStepConfirm(
+              clearDayBtn,
+              'Clear Day',
+              'Confirm?',
+              () => clearHistoryDay(dateKey)
+            );
+          }
+        });
+
+        document.getElementById('prevWeekBtn').addEventListener('click', () => {
+          state.weekOffset -= 1;
+          state.focusedDayKey = null;
+          saveAppState();
+          renderConsistencyGraph();
+          renderDayBreakdownList();
+        });
+
+        document.getElementById('nextWeekBtn').addEventListener('click', () => {
+          if (state.weekOffset < 0) {
+            state.weekOffset += 1;
+            state.focusedDayKey = null;
+            saveAppState();
+            renderConsistencyGraph();
+            renderDayBreakdownList();
+          }
+        });
+
+        document.getElementById('currentWeekBtn').addEventListener('click', () => {
+          state.weekOffset = 0;
+          state.focusedDayKey = null;
+          saveAppState();
+          renderConsistencyGraph();
+          renderDayBreakdownList();
+        });
+
+        document.getElementById('metricMissionsBtn').addEventListener('click', () => {
+          state.graphMetric = 'missions';
+          saveAppState();
+          renderConsistencyGraph();
+        });
+
+        document.getElementById('metricHoursBtn').addEventListener('click', () => {
+          state.graphMetric = 'hours';
+          saveAppState();
+          renderConsistencyGraph();
+        });
+
+        document.getElementById('dayFilterPills').addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-day-key]');
+          if (!btn) return;
+          const k = btn.dataset.dayKey;
+          state.focusedDayKey = k === 'ALL' ? null : k;
+          saveAppState();
+          renderConsistencyGraph();
+          renderDayBreakdownList();
+        });
+
+        // Keyboard Number Shortcuts (Keys 1-9 trigger ATTACK / PAUSE on auto-numbered #01-#09)
+        document.addEventListener('keydown', (e) => {
+          const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target && e.target.isContentEditable)) {
+            return;
+          }
+          if (e.ctrlKey || e.metaKey || e.altKey) return;
+          if (/^[1-9]$/.test(e.key)) {
+            const idx = Number(e.key) - 1;
+            const visible = getVisibleMissionsList();
+            if (visible[idx]) {
+              e.preventDefault();
+              toggleAttackMission(visible[idx].id);
+            }
+          }
+        });
+
+        // Initialize Pointer Drag & Drop for Mission Cards
+        initMissionPointerDrag();
+      }
+
+      // Initialize App
+      bindEvents();
+      applyVisualSettings();
+      renderAll();
+      setInterval(() => updateHudAndTimers(Date.now()), 250);
+    })();
+  </script>
+</body>
+</html>
